@@ -1,59 +1,96 @@
 # GSP Release Tracker — Deployment Guide
 
-Get a live URL in ~5 minutes using Render's free tier. No credit card needed.
+Two options: **Heroku** (recommended for your existing account) or **Render** (free tier).
 
 ---
 
-## 1. Push to GitHub
+## Option A: Heroku (interlock360 account)
 
-Create a new **private** GitHub repo (e.g. `gsp-release-tracker`) and push this folder:
+### Step 1 — Push code to GitHub
 
+**A. Create the GitHub repo first:**
+1. Go to [github.com/new](https://github.com/new)
+2. Name it `gsp-release-tracker`
+3. Set to **Private**
+4. **Do NOT** add README, .gitignore, or license (already included)
+5. Click **Create repository**
+
+**B. Create a GitHub Personal Access Token:**
+1. Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
+2. Note: `gsp-release-tracker push`
+3. Expiration: 90 days
+4. Scopes: check **repo** (full control)
+5. Click **Generate token** — copy it immediately
+
+**C. Run the push script** (from the `dashboard/` folder on your machine):
 ```bash
-# From the dashboard/ folder
-git init
-git add .
-git commit -m "Initial commit — GSP Release Tracker v1"
-git remote add origin https://github.com/YOUR_ORG/gsp-release-tracker.git
-git push -u origin main
+bash push-to-github.sh
+# Enter your token when prompted
 ```
 
-> **Important:** Add `node_modules/` and `dist/` to `.gitignore` before committing.
+Your code is now at: `https://github.com/vaneetseth-ui/gsp-release-tracker`
 
 ---
 
-## 2. Deploy on Render
+### Step 2 — Create Heroku app
 
-1. Go to **[render.com](https://render.com)** → Sign in with GitHub
-2. Click **"New +"** → **"Web Service"**
-3. Connect your GitHub repo (`gsp-release-tracker`)
-4. Render auto-detects `render.yaml` — confirm the settings:
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `node server/index.js`
-   - **Environment:** Node
-5. Click **"Create Web Service"**
-
-Render will build and deploy. First deploy takes ~2–3 minutes.
+1. Log in to [dashboard.heroku.com](https://dashboard.heroku.com)
+2. Click **New** → **Create new app**
+3. App name: `gsp-release-tracker` (or any available name)
+4. Region: United States
+5. Click **Create app**
 
 ---
 
-## 3. Confirm it's live
+### Step 3 — Connect GitHub to Heroku
 
-Once deployed, open your Render URL (e.g. `https://gsp-release-tracker.onrender.com`):
+In your new Heroku app dashboard:
+
+1. Go to **Deploy** tab
+2. Under "Deployment method" → click **GitHub**
+3. Click **Connect to GitHub** and authorize
+4. Search for `gsp-release-tracker` → click **Connect**
+5. Under "Automatic deploys" → click **Enable Automatic Deploys** (branch: `main`)
+6. Under "Manual deploy" → click **Deploy Branch** (this deploys immediately)
+
+Heroku will:
+- Run `npm install`
+- Run `npm run heroku-postbuild` (builds the React app → `dist/`)
+- Start the server via `Procfile`: `node server/index.js`
+
+---
+
+### Step 4 — Verify it's live
+
+Click **Open app** in the Heroku dashboard. You should see:
 
 | URL | Expected |
 |-----|----------|
 | `/` | React dashboard loads |
 | `/api/health` | `{"status":"ok","dataSource":"sqlite",...}` |
 | `/api/summary` | Portfolio stats JSON |
-| `/api/exceptions` | Exception records |
+| `/api/exceptions` | 6 exception records |
 
 ---
 
-## 4. Share with stakeholders
+### Step 5 — Share with stakeholders
 
-Send your team the Render URL — it's publicly accessible (no login required for this prototype).
+Your live URL will be: `https://gsp-release-tracker.herokuapp.com`
 
-> **Tip:** Bookmark `/api/health` to check if the service is up. Free tier spins down after 15 min of inactivity; first request after spin-down takes ~30 seconds.
+Send this to your team for feedback. No login required.
+
+> **Note:** Heroku free dynos spin down after 30 min of inactivity. First request after idle takes ~10–20 seconds. Upgrade to Eco ($5/mo) for always-on.
+
+---
+
+## Option B: Render (alternative)
+
+1. Go to [render.com](https://render.com) → New → Web Service
+2. Connect your GitHub repo (`gsp-release-tracker`)
+3. Render detects `render.yaml` automatically
+4. Click **Create Web Service**
+
+Live URL: `https://gsp-release-tracker.onrender.com`
 
 ---
 
@@ -63,68 +100,63 @@ Send your team the Render URL — it's publicly accessible (no login required fo
 # Install dependencies
 npm install
 
-# Start the full stack (React dev server + Express API)
+# Start full stack (React dev + Express API)
 npm run dev:full
 
-# Or run servers separately:
-npm run dev          # Vite on http://localhost:5174
-npm run dev:server   # Express API on http://localhost:3001
+# Or separately:
+npm run dev          # Vite → http://localhost:5174
+npm run dev:server   # Express API → http://localhost:3001
 ```
-
-The Vite dev server proxies `/api/*` requests to the Express server automatically.
 
 ---
 
 ## Project structure
 
 ```
-dashboard/
+├── Procfile              ← Heroku: start command
+├── render.yaml           ← Render: deploy config
+├── push-to-github.sh     ← One-time GitHub push script
 ├── server/
-│   ├── index.js      ← Express API server (6 endpoints)
-│   ├── db.js         ← Query layer (pure-JS for prototype, SQLite for prod)
-│   ├── data.js       ← In-memory mock dataset (85 partner-product records)
-│   ├── schema.sql    ← SQLite schema (for production wiring to real data)
-│   └── seed.js       ← Seed script (run once: node server/seed.js)
+│   ├── index.js          ← Express API (6 endpoints)
+│   ├── db.js             ← Query layer (pure-JS in-memory)
+│   ├── data.js           ← 85 partner-product records
+│   ├── schema.sql        ← SQLite schema (for prod data wiring)
+│   └── seed.js           ← DB seed script
 ├── src/
-│   ├── App.jsx               ← Main shell + tab navigation
-│   ├── api.js                ← API client with health-check fallback
-│   ├── components/
-│   │   ├── MatrixView.jsx    ← 17×5 release matrix grid
-│   │   ├── PartnerView.jsx   ← Side panel: partner deep-dive
-│   │   ├── ExceptionPanel.jsx← Tier 3 exception view
-│   │   └── ChangelogFeed.jsx ← Recent status changes
-│   └── data/mockData.js      ← Frontend mock data (for offline/demo mode)
-├── render.yaml       ← Render deployment config
-└── package.json
+│   ├── App.jsx           ← Shell + tab navigation
+│   ├── api.js            ← API client + fallback
+│   └── components/
+│       ├── MatrixView.jsx
+│       ├── PartnerView.jsx
+│       ├── ExceptionPanel.jsx
+│       └── ChangelogFeed.jsx
+└── package.json          ← engines + heroku-postbuild
 ```
 
 ---
 
-## API endpoints
+## API reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/health` | Health check + last sync time |
-| GET | `/api/summary` | Portfolio stats (counts by stage, exceptions) |
-| GET | `/api/partners` | List of all partner names |
-| GET | `/api/releases` | All releases (`?partner=X&product=Y&stage=Z`) |
-| GET | `/api/exceptions` | Exception records (`?type=blocked\|red\|nopm\|eap`) |
+| GET | `/api/health` | Health + last sync time |
+| GET | `/api/summary` | Portfolio stats |
+| GET | `/api/partners` | All partner names |
+| GET | `/api/releases` | Releases (`?partner=X&product=Y&stage=Z`) |
+| GET | `/api/exceptions` | Exceptions (`?type=blocked\|red\|nopm\|eap`) |
 | GET | `/api/changelog` | Recent changes (`?limit=N&partner=X`) |
-| POST | `/api/query` | Natural language query → 4-tier routed result |
+| POST | `/api/query` | Natural language query → 4-tier result |
 
 ---
 
-## Connecting to real data (Phase 2)
+## Wiring to live data (Phase 2)
 
-When you're ready to wire in live data from Jira / Monday / SFDC:
+1. Update `server/db.js` to use the SQLite version (scaffolded in `server/schema.sql`)
+2. Run `python sync_gsp_tracker.py` to populate `gsp_tracker.db`
+3. Commit and push → Heroku auto-deploys
 
-1. Update `server/db.js` to use the SQLite version (already scaffolded in `server/schema.sql`)
-2. Run the pipeline: `python sync_gsp_tracker.py` to populate `gsp_tracker.db`
-3. Set `USE_DB=1` env var in Render dashboard
-4. Redeploy — the API automatically serves live data
-
-The dashboard UI and all API endpoints stay the same.
+The dashboard UI stays exactly the same.
 
 ---
 
-*Built for RingCentral PMO — GSP Release Tracker Agent v1.0*
+*RingCentral PMO — GSP Release Tracker Agent v1.0*
