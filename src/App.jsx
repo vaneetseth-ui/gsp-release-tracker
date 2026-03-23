@@ -4,17 +4,19 @@
  * Slide-in PartnerView panel on partner/cell selection
  */
 import React, { useState, useCallback } from 'react';
-import { Grid3X3, AlertCircle, Clock, ChevronRight, RefreshCw, Info } from 'lucide-react';
+import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw } from 'lucide-react';
 import MatrixView      from './components/MatrixView.jsx';
 import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
+import AskPanel        from './components/AskPanel.jsx';
 import { getSummary }  from './data/mockData.js';
 
 const TABS = [
-  { id: 'matrix',     label: 'Release Matrix',   icon: Grid3X3,    desc: '17 partners × 5 products' },
-  { id: 'exceptions', label: 'Exceptions',        icon: AlertCircle, desc: 'Blocked · Red accounts · No PM' },
-  { id: 'changelog',  label: 'Changelog',         icon: Clock,       desc: 'Recent status changes' },
+  { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: '17 partners × 5 products' },
+  { id: 'exceptions', label: 'Exceptions',      icon: AlertCircle,   desc: 'Blocked · Red accounts · No PM' },
+  { id: 'changelog',  label: 'Changelog',       icon: Clock,         desc: 'Recent status changes' },
+  { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language queries' },
 ];
 
 function Header({ activeTab, onTabChange, onRefresh }) {
@@ -43,11 +45,6 @@ function Header({ activeTab, onTabChange, onRefresh }) {
               <span className="text-red-300"><span className="text-red-200 font-bold">{summary.blocked}</span> Blocked</span>
             )}
           </div>
-
-          {/* Prototype badge */}
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-400 text-amber-900">
-            <Info size={10} /> Prototype · Mock Data
-          </span>
 
           <button
             onClick={onRefresh}
@@ -134,6 +131,9 @@ export default function App() {
           )}
           {activeTab === 'changelog' && (
             <ChangelogFeed onSelectPartner={handleSelectPartner} />
+          )}
+          {activeTab === 'ask' && (
+            <AskPanel />
           )}
         </main>
 
