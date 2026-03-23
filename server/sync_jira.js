@@ -1,0 +1,299 @@
+/**
+ * sync_jira.js — Jira → GSP Release Tracker data sync
+ *
+ * Fetches issues from Jira (project GSP + PTR) and transforms them
+ * into the dashboard schema: { partner, product, stage, pm, se_lead,
+ * csm, target_date, actual_date, jira_number, notes, blocked,
+ * red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk }
+ *
+ * Field mapping strategy:
+ *   - summary          → parsed for partner + product names
+ *   - status.name      → normalized to stage
+ *   - assignee         → PM
+ *   - duedate          → target_date
+ *   - resolutiondate   → actual_date
+ *   - labels           → flags (blocked, red-account, no-pm)
+ *   - components[0]    → product (if set)
+ *   - custom fields    → overrideable via env vars (see FIELD_MAP below)
+ *
+ * Env vars:
+ *   JIRA_URL           https://jira.ringcentral.com
+ *   JIRA_PAT           Bearer token
+ *   JIRA_FIELD_PARTNER customfield_XXXXX  (optional, for explicit partner field)
+ *   JIRA_FIELD_PRODUCT customfield_XXXXX  (optional, for explicit product field)
+ *   JIRA_FIELD_SE      customfield_XXXXX  (optional, SE Lead field)
+ *   JIRA_FIELD_CSM     customfield_XXXXX  (optional, CSM field)
+ *   JIRA_FIELD_ARR     customfield_XXXXX  (optional, ARR at risk field)
+ *   JIRA_FIELD_STAGE   customfield_XXXXX  (optional, if stage is a custom field)
+ */
+
+const JIRA_URL = process.env.JIRA_URL || 'https://jira.ringcentral.com';
+const JIRA_PAT = process.env.JIRA_PAT || '';
+
+// Custom field IDs — set these via Heroku config vars once you know them
+// Run GET /api/sync/fields to discover the available custom fields
+const FIELD_MAP = {
+  partner:  process.env.JIRA_FIELD_PARTNER || null,
+  product:  process.env.JIRA_FIELD_PRODUCT || null,
+  se_lead:  process.env.JIRA_FIELD_SE      || null,
+  csm:      process.env.JIRA_FIELD_CSM     || null,
+  arr:      process.env.JIRA_FIELD_ARR     || null,
+  stage:    process.env.JIRA_FIELD_STAGE   || null,
+};
+
+// Known GSP products — used to parse product from issue summary or labels
+const KNOWN_PRODUCTS = ['Nova IVA', 'RingCX', 'AIR', 'MVP', 'ACO', 'RingEX'];
+
+// Known GSP partners — used to parse partner from summary
+const KNOWN_PARTNERS = [
+  'AT&T', "AT&T O@H", 'Avaya', 'BT', 'Deutsche Telekom', 'DT-Unify', 'Ecotel',
+  'MCM', 'NTT', 'Orange', 'Rogers', 'SoftBank', 'Swisscom', 'Telus',
+  'Telefonica', 'Versatel', 'Vodafone', 'Verizon', 'KDDI', 'TELUS',
+];
+
+// Status → Stage normalization
+const STATUS_TO_STAGE = {
+  'done':            'GA',
+  'closed':          'GA',
+  'released':        'GA',
+  'ga':              'GA',
+  'generally available': 'GA',
+  'in beta':         'Beta',
+  'beta':            'Beta',
+  'beta testing':    'Beta',
+  'eap':             'EAP',
+  'early access':    'EAP',
+  'early adopter':   'EAP',
+  'in development':  'Dev',
+  'dev':             'Dev',
+  'in progress':     'Dev',
+  'development':     'Dev',
+  'planned':         'Planned',
+  'to do':           'Planned',
+  'open':            'Planned',
+  'backlog':         'Planned',
+  'blocked':         'Blocked',
+  'impediment':      'Blocked',
+  'on hold':         'Blocked',
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function normalizeStage(statusName = '') {
+  return STATUS_TO_STAGE[statusName.toLowerCase()] || 'Dev';
+}
+
+function parsePartnerFromSummary(summary = '') {
+  for (const p of KNOWN_PARTNERS) {
+    if (summary.toLowerCase().includes(p.toLowerCase())) return p;
+  }
+  // Try "[Partner] - Product" or "Partner: Product" patterns
+  const m = summary.match(/^([A-Za-z0-9&@' ]+?)[\s\-:–]+/);
+  return m ? m[1].trim() : 'Unknown';
+}
+
+function parseProductFromSummary(summary = '', labels = [], components = []) {
+  // 1. Check components first (most reliable)
+  for (const c of components) {
+    for (const prod of KNOWN_PRODUCTS) {
+      if (c.name?.toLowerCase().includes(prod.toLowerCase())) return prod;
+    }
+  }
+  // 2. Check labels
+  for (const l of labels) {
+    for (const prod of KNOWN_PRODUCTS) {
+      if (l.toLowerCase().includes(prod.toLowerCase())) return prod;
+    }
+  }
+  // 3. Parse from summary
+  for (const prod of KNOWN_PRODUCTS) {
+    if (summary.toLowerCase().includes(prod.toLowerCase())) return prod;
+  }
+  return 'Unknown';
+}
+
+function getCustomField(issue, fieldId) {
+  if (!fieldId) return null;
+  const val = issue.fields[fieldId];
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return val;
+  if (val.displayName) return val.displayName;
+  if (val.name)        return val.name;
+  if (val.value)       return val.value;
+  return String(val);
+}
+
+function daysBetween(dateA, dateB = new Date()) {
+  if (!dateA) return null;
+  const d = new Date(dateA);
+  return Math.floor((dateB - d) / (1000 * 60 * 60 * 24));
+}
+
+// ── Transform a single Jira issue → dashboard record ─────────────────────────
+
+function transformIssue(issue, index) {
+  const f = issue.fields;
+
+  const summary    = f.summary || '';
+  const labels     = f.labels  || [];
+  const components = f.components || [];
+
+  // Partner & product
+  const partner = getCustomField(issue, FIELD_MAP.partner) || parsePartnerFromSummary(summary);
+  const product = getCustomField(issue, FIELD_MAP.product) || parseProductFromSummary(summary, labels, components);
+
+  // Stage
+  const stageRaw = FIELD_MAP.stage
+    ? getCustomField(issue, FIELD_MAP.stage)
+    : f.status?.name;
+  const stage = normalizeStage(stageRaw);
+
+  // People
+  const pm      = getCustomField(issue, FIELD_MAP.se_lead) || f.assignee?.displayName || null;
+  const se_lead = getCustomField(issue, FIELD_MAP.se_lead) || null;
+  const csm     = getCustomField(issue, FIELD_MAP.csm)     || null;
+
+  // Dates
+  const target_date = f.duedate      || null;
+  const actual_date = f.resolutiondate ? f.resolutiondate.split('T')[0] : null;
+
+  // Flags from labels
+  const blocked     = stage === 'Blocked' || labels.some(l => /blocked|impediment|on.hold/i.test(l)) ? 1 : 0;
+  const red_account = labels.some(l => /red.account|red.acct|at.risk/i.test(l)) ? 1 : 0;
+  const missing_pm  = !f.assignee ? 1 : 0;
+
+  // ARR at risk (custom field or parsed from labels)
+  let arr_at_risk = getCustomField(issue, FIELD_MAP.arr);
+  if (!arr_at_risk) {
+    const arrLabel = labels.find(l => /\$[\d.]+[KkMm]/.test(l));
+    if (arrLabel) {
+      const m = arrLabel.match(/\$([\d.]+)([KkMm])/);
+      if (m) arr_at_risk = parseFloat(m[1]) * (m[2].toLowerCase() === 'm' ? 1000000 : 1000);
+    }
+  }
+
+  // Time calculations
+  const created     = new Date(f.created);
+  const now         = new Date();
+  const days_in_eap = stage === 'EAP' ? daysBetween(created) : null;
+  const days_overdue = (blocked && target_date && new Date(target_date) < now)
+    ? daysBetween(target_date)
+    : null;
+
+  return {
+    id:           index + 1,
+    jira_key:     issue.key,
+    partner,
+    product,
+    stage,
+    target_date,
+    actual_date,
+    jira_number:  issue.key,
+    pm,
+    se_lead,
+    csm,
+    notes:        f.description ? String(f.description).slice(0, 200).replace(/\n/g, ' ') : null,
+    blocked,
+    red_account,
+    missing_pm,
+    days_overdue,
+    days_in_eap,
+    arr_at_risk:  arr_at_risk ? Number(arr_at_risk) : null,
+    // raw for debugging
+    _status_raw:  f.status?.name,
+    _summary_raw: summary,
+  };
+}
+
+// ── Fetch all pages from Jira search ─────────────────────────────────────────
+
+async function fetchJiraIssues(jql, startAt = 0, maxResults = 100) {
+  const url = new URL(`${JIRA_URL}/rest/api/2/search`);
+  url.searchParams.set('jql',        jql);
+  url.searchParams.set('startAt',    startAt);
+  url.searchParams.set('maxResults', maxResults);
+  url.searchParams.set('fields', [
+    'summary', 'status', 'assignee', 'reporter', 'priority',
+    'duedate', 'resolutiondate', 'created', 'updated',
+    'labels', 'components', 'description', 'issuetype',
+    // add custom fields dynamically
+    ...Object.values(FIELD_MAP).filter(Boolean),
+  ].join(','));
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      'Authorization': `Bearer ${JIRA_PAT}`,
+      'Accept':        'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Jira API ${res.status}: ${text.slice(0, 300)}`);
+  }
+
+  return res.json();
+}
+
+// ── Fetch ALL custom field definitions (for /api/sync/fields) ────────────────
+
+export async function fetchJiraFields() {
+  if (!JIRA_PAT) throw new Error('JIRA_PAT env var not set');
+  const res = await fetch(`${JIRA_URL}/rest/api/2/field`, {
+    headers: { 'Authorization': `Bearer ${JIRA_PAT}`, 'Accept': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Jira fields API ${res.status}`);
+  const fields = await res.json();
+  // Return custom fields only, sorted by id
+  return fields
+    .filter(f => f.custom)
+    .map(f => ({ id: f.id, name: f.name, type: f.schema?.type }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ── Main sync function ────────────────────────────────────────────────────────
+
+export async function syncFromJira() {
+  if (!JIRA_PAT) {
+    throw new Error('JIRA_PAT environment variable is not set. Add it via Heroku Config Vars.');
+  }
+
+  const JQL_QUERIES = [
+    'project = GSP AND resolution = Unresolved ORDER BY priority DESC, updated DESC',
+    'project = PTR AND resolution = Unresolved ORDER BY priority DESC, updated DESC',
+  ];
+
+  const allIssues = [];
+
+  for (const jql of JQL_QUERIES) {
+    let startAt = 0;
+    let total   = Infinity;
+
+    while (startAt < total) {
+      const data = await fetchJiraIssues(jql, startAt, 100);
+      total       = data.total;
+      allIssues.push(...data.issues);
+      startAt    += data.issues.length;
+      if (data.issues.length === 0) break;
+    }
+  }
+
+  // De-duplicate by Jira key
+  const seen = new Set();
+  const unique = allIssues.filter(i => {
+    if (seen.has(i.key)) return false;
+    seen.add(i.key);
+    return true;
+  });
+
+  const releases = unique.map(transformIssue);
+
+  return {
+    releases,
+    fetchedAt:  new Date().toISOString(),
+    totalIssues: unique.length,
+    projects:   ['GSP', 'PTR'],
+    jql:        JQL_QUERIES,
+  };
+}

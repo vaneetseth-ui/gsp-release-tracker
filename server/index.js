@@ -3,18 +3,22 @@
  * Serves both the React build (static) and REST API endpoints
  *
  * Endpoints:
- *   GET  /api/health            — health check + last sync time
+ *   GET  /api/health            — health check + sync status
  *   GET  /api/summary           — portfolio stats
  *   GET  /api/releases          — all releases (?partner=X &product=Y &stage=Z)
  *   GET  /api/exceptions        — all exceptions (?type=blocked|red|nopm|eap)
  *   GET  /api/changelog         — recent changes (?limit=N &partner=X)
  *   POST /api/query             — natural language query → tier-routed result
+ *   POST /api/sync              — pull live data from Jira (requires JIRA_PAT env var)
+ *   GET  /api/sync/status       — last sync time + issue count
+ *   GET  /api/sync/fields       — list all Jira custom fields (for mapping setup)
  */
 import express   from 'express';
 import cors      from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as db from './db.js';
+import { syncFromJira, fetchJiraFields } from './sync_jira.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const PORT       = process.env.PORT || 3001;
@@ -31,9 +35,64 @@ app.use(express.static(DIST));
 app.get('/api/health', (_req, res) => {
   try {
     const summary = db.getSummary();
-    res.json({ status: 'ok', dataSource: 'sqlite', timestamp: new Date().toISOString(), summary });
+    const meta    = db.getLiveMeta();
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), ...meta, summary });
   } catch (e) {
     res.status(503).json({ status: 'error', message: e.message });
+  }
+});
+
+// ── Jira Sync ─────────────────────────────────────────────────────────────────
+let syncInProgress = false;
+
+app.post('/api/sync', async (_req, res) => {
+  if (!process.env.JIRA_PAT) {
+    return res.status(503).json({
+      error: 'JIRA_PAT environment variable not set.',
+      hint:  'Add it via: Heroku Dashboard → Settings → Config Vars → JIRA_PAT',
+    });
+  }
+  if (syncInProgress) {
+    return res.status(409).json({ error: 'Sync already in progress. Try again shortly.' });
+  }
+  syncInProgress = true;
+  try {
+    console.log('[sync] Starting Jira sync…');
+    const result = await syncFromJira();
+    db.setLiveData(result.releases, {
+      totalIssues: result.totalIssues,
+      projects:    result.projects,
+      fetchedAt:   result.fetchedAt,
+    });
+    console.log(`[sync] Done — ${result.releases.length} releases from ${result.totalIssues} Jira issues`);
+    res.json({
+      success:       true,
+      releases:      result.releases.length,
+      totalIssues:   result.totalIssues,
+      fetchedAt:     result.fetchedAt,
+      mode:          'live',
+    });
+  } catch (e) {
+    console.error('[sync] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    syncInProgress = false;
+  }
+});
+
+app.get('/api/sync/status', (_req, res) => {
+  res.json(db.getLiveMeta());
+});
+
+app.get('/api/sync/fields', async (_req, res) => {
+  if (!process.env.JIRA_PAT) {
+    return res.status(503).json({ error: 'JIRA_PAT not set' });
+  }
+  try {
+    const fields = await fetchJiraFields();
+    res.json({ fields, hint: 'Set JIRA_FIELD_* env vars to map these to dashboard schema' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

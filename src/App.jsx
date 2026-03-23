@@ -3,8 +3,9 @@
  * Tab navigation: Matrix | Exceptions | Changelog
  * Slide-in PartnerView panel on partner/cell selection
  */
-import React, { useState, useCallback } from 'react';
-import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { api } from './api.js';
 import MatrixView      from './components/MatrixView.jsx';
 import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
@@ -19,7 +20,7 @@ const TABS = [
   { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language queries' },
 ];
 
-function Header({ activeTab, onTabChange, onRefresh }) {
+function Header({ activeTab, onTabChange, onRefresh, syncState }) {
   const summary = getSummary();
 
   return (
@@ -48,10 +49,16 @@ function Header({ activeTab, onTabChange, onRefresh }) {
 
           <button
             onClick={onRefresh}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-xs font-medium"
+            disabled={syncState === 'syncing'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 transition-colors text-xs font-medium"
           >
-            <RefreshCw size={13} />
-            <span className="hidden sm:inline">Sync</span>
+            {syncState === 'syncing' && <RefreshCw size={13} className="animate-spin" />}
+            {syncState === 'success' && <CheckCircle2 size={13} className="text-emerald-300" />}
+            {syncState === 'error'   && <XCircle size={13} className="text-red-300" />}
+            {(!syncState || syncState === 'idle') && <RefreshCw size={13} />}
+            <span className="hidden sm:inline">
+              {syncState === 'syncing' ? 'Syncing…' : syncState === 'success' ? 'Synced!' : syncState === 'error' ? 'Failed' : 'Sync Jira'}
+            </span>
           </button>
         </div>
       </div>
@@ -90,6 +97,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('matrix');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [syncState, setSyncState] = useState('idle'); // idle | syncing | success | error
 
   const handleSelectPartner = useCallback((partner) => {
     setSelectedPartner(partner);
@@ -99,10 +107,18 @@ export default function App() {
     setSelectedPartner(release.partner);
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    setRefreshKey(k => k + 1);
-    // In production: trigger sync_gsp_tracker.py via API call
-    console.log('Sync triggered — in production this calls the backend pipeline');
+  const handleRefresh = useCallback(async () => {
+    setSyncState('syncing');
+    try {
+      await api.sync();
+      setSyncState('success');
+      setRefreshKey(k => k + 1);
+      setTimeout(() => setSyncState('idle'), 3000);
+    } catch (e) {
+      console.error('Sync failed:', e.message);
+      setSyncState('error');
+      setTimeout(() => setSyncState('idle'), 4000);
+    }
   }, []);
 
   const panelOpen = !!selectedPartner;
@@ -113,6 +129,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onRefresh={handleRefresh}
+        syncState={syncState}
       />
 
       {/* Main content area + optional side panel */}

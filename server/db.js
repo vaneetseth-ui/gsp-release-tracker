@@ -1,37 +1,65 @@
 /**
- * db.js — Query layer (pure-JS in-memory for prototype; swap to SQLite for production)
+ * db.js — Query layer with live Jira cache
  *
- * In production: replace this file with the SQLite version (see db.sqlite.js)
+ * Data priority:
+ *   1. liveCache  — populated by POST /api/sync (fetches from Jira)
+ *   2. RELEASES   — mock data fallback (used until first sync runs)
+ *
  * All exported function signatures stay identical — index.js doesn't change.
  */
-import { RELEASES, CHANGELOG } from './data.js';
+import { RELEASES as MOCK_RELEASES, CHANGELOG } from './data.js';
+
+// ── Live data cache (in-memory, populated by syncFromJira()) ──────────────────
+let liveCache = null;   // null = not yet synced; array = live data
+let lastSyncAt = null;
+let lastSyncMeta = null;
+
+export function setLiveData(releases, meta = {}) {
+  liveCache   = releases;
+  lastSyncAt  = new Date().toISOString();
+  lastSyncMeta = meta;
+}
+
+export function getLiveMeta() {
+  return {
+    mode:      liveCache ? 'live' : 'mock',
+    lastSyncAt,
+    issueCount: liveCache?.length ?? MOCK_RELEASES.length,
+    ...lastSyncMeta,
+  };
+}
+
+// Use live data if available, otherwise fall back to mock
+function DATA() {
+  return liveCache ?? MOCK_RELEASES;
+}
 
 // ── Releases ──────────────────────────────────────────────────────────────────
 
 export function getAllReleases() {
-  return [...RELEASES].sort((a, b) => a.partner.localeCompare(b.partner) || a.product.localeCompare(b.product));
+  return [...DATA()].sort((a, b) => a.partner.localeCompare(b.partner) || a.product.localeCompare(b.product));
 }
 
 export function getReleasesByPartner(partner) {
-  return RELEASES.filter(r => r.partner === partner).sort((a, b) => a.product.localeCompare(b.product));
+  return DATA().filter(r => r.partner === partner).sort((a, b) => a.product.localeCompare(b.product));
 }
 
 export function getRelease(partner, product) {
-  return RELEASES.find(r => r.partner === partner && r.product === product) || null;
+  return DATA().find(r => r.partner === partner && r.product === product) || null;
 }
 
 export function getReleasesByStage(stage) {
-  return RELEASES.filter(r => r.stage === stage && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
+  return DATA().filter(r => r.stage === stage && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
 }
 
 export function getReleasesByProduct(product) {
-  return RELEASES.filter(r => r.product === product && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
+  return DATA().filter(r => r.product === product && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
 }
 
 // ── Exceptions ────────────────────────────────────────────────────────────────
 
 export function getExceptions() {
-  return RELEASES
+  return DATA()
     .filter(r => r.blocked || r.red_account || r.missing_pm || (r.days_in_eap && r.days_in_eap > 90))
     .sort((a, b) => {
       const rank = r => r.blocked ? 0 : r.red_account ? 1 : (r.days_in_eap > 90) ? 2 : 3;
@@ -40,19 +68,19 @@ export function getExceptions() {
 }
 
 export function getBlocked() {
-  return RELEASES.filter(r => r.blocked).sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0));
+  return DATA().filter(r => r.blocked).sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0));
 }
 
 export function getRedAccounts() {
-  return RELEASES.filter(r => r.red_account).sort((a, b) => (b.arr_at_risk || 0) - (a.arr_at_risk || 0));
+  return DATA().filter(r => r.red_account).sort((a, b) => (b.arr_at_risk || 0) - (a.arr_at_risk || 0));
 }
 
 export function getMissingPM() {
-  return RELEASES.filter(r => r.missing_pm).sort((a, b) => a.partner.localeCompare(b.partner));
+  return DATA().filter(r => r.missing_pm).sort((a, b) => a.partner.localeCompare(b.partner));
 }
 
 export function getOverdueEAP() {
-  return RELEASES.filter(r => r.days_in_eap > 90 && !r.blocked).sort((a, b) => (b.days_in_eap || 0) - (a.days_in_eap || 0));
+  return DATA().filter(r => r.days_in_eap > 90 && !r.blocked).sort((a, b) => (b.days_in_eap || 0) - (a.days_in_eap || 0));
 }
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
@@ -72,22 +100,24 @@ export function getChangelogByPartner(partner) {
 // ── Summary stats ─────────────────────────────────────────────────────────────
 
 export function getSummary() {
-  const active = RELEASES.filter(r => r.stage !== 'N/A');
-
+  const d      = DATA();
+  const active = d.filter(r => r.stage !== 'N/A');
   const byStage = {};
   active.forEach(r => { byStage[r.stage] = (byStage[r.stage] || 0) + 1; });
 
   return {
     total:       active.length,
     byStage,
-    blocked:     RELEASES.filter(r => r.blocked).length,
-    redAccounts: RELEASES.filter(r => r.red_account).length,
-    missingPM:   RELEASES.filter(r => r.missing_pm).length,
+    blocked:     d.filter(r => r.blocked).length,
+    redAccounts: d.filter(r => r.red_account).length,
+    missingPM:   d.filter(r => r.missing_pm).length,
+    mode:        liveCache ? 'live' : 'mock',
+    lastSyncAt,
   };
 }
 
 // ── Partners list ─────────────────────────────────────────────────────────────
 
 export function getPartners() {
-  return [...new Set(RELEASES.map(r => r.partner))].sort();
+  return [...new Set(DATA().map(r => r.partner))].sort();
 }
