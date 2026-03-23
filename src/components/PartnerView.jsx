@@ -1,0 +1,189 @@
+/**
+ * PartnerView — Slide-in side panel for partner deep-dive
+ * Shows all releases for a partner + key contacts + exceptions
+ */
+import React from 'react';
+import { X, ExternalLink, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { PRODUCTS, STAGES, getPartnerReleases } from '../data/mockData.js';
+
+function ContactBadge({ icon: Icon, label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-slate-600">
+      <Icon size={12} className="text-slate-400 flex-shrink-0" />
+      <span className="text-slate-400">{label}:</span>
+      <span className="font-medium text-slate-700">{value}</span>
+    </div>
+  );
+}
+
+function StageChip({ stage }) {
+  const s = STAGES[stage] || STAGES['N/A'];
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${s.badge}`}>
+      {s.label}
+    </span>
+  );
+}
+
+function ReleaseCard({ release }) {
+  const isNA = release.stage === 'N/A';
+  if (isNA) return null;
+
+  const hasAlert = release.blocked || release.redAccount || release.missingPM ||
+    (release.daysInEAP && release.daysInEAP > 90);
+
+  return (
+    <div className={`rounded-lg border p-3 space-y-2 transition-all ${release.blocked ? 'border-red-300 bg-red-50' : hasAlert ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}>
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold text-sm text-slate-800">{release.product}</div>
+          {release.jira && (
+            <span className="text-xs text-blue-600 font-mono">{release.jira}</span>
+          )}
+        </div>
+        <StageChip stage={release.stage} />
+      </div>
+
+      {/* Alert flags */}
+      {hasAlert && (
+        <div className="flex flex-wrap gap-1.5">
+          {release.blocked && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              <AlertCircle size={10} /> Blocked {release.daysOverdue ? `${release.daysOverdue}d` : ''}
+            </span>
+          )}
+          {release.redAccount && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              <DollarSign size={10} /> Red Account · ${(release.arrAtRisk / 1000).toFixed(0)}K ARR at risk
+            </span>
+          )}
+          {release.missingPM && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+              <UserX size={10} /> PM unassigned
+            </span>
+          )}
+          {release.daysInEAP > 90 && !release.blocked && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+              <AlertTriangle size={10} /> {release.daysInEAP}d in EAP
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Dates */}
+      <div className="flex gap-4 text-xs">
+        {release.target_date && (
+          <div className="flex items-center gap-1 text-slate-500">
+            <Calendar size={11} />
+            <span>Target: <span className="font-medium text-slate-700">{release.target_date}</span></span>
+          </div>
+        )}
+        {release.actual_date && (
+          <div className="flex items-center gap-1 text-emerald-600">
+            <CheckCircle2 size={11} />
+            <span>Live: <span className="font-medium">{release.actual_date}</span></span>
+          </div>
+        )}
+      </div>
+
+      {/* Contacts */}
+      <div className="grid grid-cols-2 gap-1">
+        <ContactBadge icon={Briefcase}      label="PM"  value={release.pm} />
+        <ContactBadge icon={User}           label="SE"  value={release.se_lead} />
+        <ContactBadge icon={HeartHandshake} label="CSM" value={release.csm} />
+      </div>
+
+      {/* Notes */}
+      {release.notes && (
+        <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-2 mt-1">
+          {release.notes}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function PartnerView({ partner, onClose }) {
+  if (!partner) return null;
+
+  const releases = getPartnerReleases(partner);
+  const activeReleases = releases.filter(r => r.stage !== 'N/A');
+  const naCount = releases.filter(r => r.stage === 'N/A').length;
+
+  // Get representative contact info
+  const rep = activeReleases.find(r => r.csm) || releases[0];
+  const csm = rep?.csm;
+
+  // Stage summary
+  const stageCounts = {};
+  activeReleases.forEach(r => {
+    stageCounts[r.stage] = (stageCounts[r.stage] || 0) + 1;
+  });
+
+  const exceptions = activeReleases.filter(r =>
+    r.blocked || r.redAccount || r.missingPM || (r.daysInEAP > 90)
+  );
+
+  return (
+    <div className="flex flex-col h-full bg-slate-50">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-rc-navy text-white flex-shrink-0">
+        <div>
+          <h2 className="text-lg font-bold">{partner}</h2>
+          <p className="text-xs text-blue-200">
+            {activeReleases.length} active products · {naCount} not applicable
+            {exceptions.length > 0 && <span className="text-red-300 ml-2">· {exceptions.length} exception{exceptions.length > 1 ? 's' : ''}</span>}
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+          aria-label="Close panel"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Stage summary bar */}
+      <div className="flex flex-wrap gap-2 px-4 py-2.5 bg-white border-b border-slate-200 flex-shrink-0">
+        {Object.entries(stageCounts).map(([stage, count]) => (
+          <span key={stage} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGES[stage]?.badge || 'bg-gray-100 text-gray-600'}`}>
+            {stage} <span className="font-bold">{count}</span>
+          </span>
+        ))}
+        {csm && (
+          <span className="ml-auto text-xs text-slate-500 flex items-center gap-1">
+            <HeartHandshake size={12} className="text-slate-400" />
+            CSM: <span className="font-medium text-slate-700">{csm}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Releases */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-2.5">
+        {PRODUCTS.map(product => {
+          const release = releases.find(r => r.product === product);
+          if (!release || release.stage === 'N/A') return null;
+          return <ReleaseCard key={product} release={release} />;
+        })}
+
+        {/* N/A products listed compactly */}
+        {naCount > 0 && (
+          <div className="rounded-lg border border-dashed border-slate-200 px-3 py-2">
+            <p className="text-xs text-slate-400 font-medium mb-1">Not applicable</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PRODUCTS.filter(p => {
+                const r = releases.find(r => r.product === p);
+                return !r || r.stage === 'N/A';
+              }).map(p => (
+                <span key={p} className="text-xs px-2 py-0.5 bg-slate-100 text-slate-400 rounded">{p}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

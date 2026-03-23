@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: gsp-release-tracker
+    runtime: node
+    region: oregon           # or frankfurt for EMEA
+    plan: free               # upgrade to starter ($7/mo) for always-on
+
+    # ── Build ─────────────────────────────────────────────────────────────────
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js
+
+    # ── Environment variables ─────────────────────────────────────────────────
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000           # Render assigns this automatically; just keep in sync
+
+    # ── Health check ──────────────────────────────────────────────────────────
+    healthCheckPath: /api/health

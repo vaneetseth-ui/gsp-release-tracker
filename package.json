@@ -1,0 +1,37 @@
+{
+  "name": "gsp-release-tracker-dashboard",
+  "version": "1.0.0",
+  "description": "GSP Release Tracker — React Dashboard + API Server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm":  ">=9.0.0"
+  },
+  "scripts": {
+    "dev":              "vite --port 5174",
+    "dev:server":       "node --watch server/index.js",
+    "dev:full":         "concurrently \"npm run dev\" \"npm run dev:server\"",
+    "build":            "vite build",
+    "heroku-postbuild": "vite build",
+    "preview":          "vite preview",
+    "seed":             "node server/seed.js",
+    "start":            "node server/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "cors":           "^2.8.5",
+    "express":        "^4.18.3",
+    "lucide-react":   "^0.383.0",
+    "react":          "^18.2.0",
+    "react-dom":      "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer":         "^10.4.17",
+    "concurrently":         "^8.2.2",
+    "postcss":              "^8.4.35",
+    "tailwindcss":          "^3.4.1",
+    "vite":                 "^5.1.4"
+  }
+}
