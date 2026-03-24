@@ -1,161 +1,189 @@
 /**
- * server/database.js — PostgreSQL persistence layer
- *
- * Used when DATABASE_URL env var is set (Heroku Postgres addon sets this automatically).
- * Falls back to in-memory mock data when DATABASE_URL is not set.
+ * database.js — optional PostgreSQL persistence (Heroku Postgres / DATABASE_URL)
  */
 import pg from 'pg';
+
 const { Pool } = pg;
 
 let pool = null;
 
-export function isDbAvailable() {
-  return !!process.env.DATABASE_URL;
-}
-
 export function getPool() {
-  if (!pool && process.env.DATABASE_URL) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }, // required for Heroku Postgres
-    });
-  }
   return pool;
 }
 
-// ── Schema init ───────────────────────────────────────────────────────────────
-
-export async function initDb() {
-  if (!isDbAvailable()) return;
-  const client = await getPool().connect();
-  try {
-    // Drop the old UNIQUE constraint on jira_key if it exists
-    // (multiple releases can share a jira_key or have null)
-    await client.query(`
-      DO $$ BEGIN
-        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'releases_jira_key_key') THEN
-          ALTER TABLE releases DROP CONSTRAINT releases_jira_key_key;
-        END IF;
-      END $$;
-    `).catch(() => {});
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS releases (
-        id           SERIAL PRIMARY KEY,
-        jira_key     TEXT,
-        partner      TEXT,
-        product      TEXT,
-        stage        TEXT,
-        target_date  TEXT,
-        actual_date  TEXT,
-        jira_number  TEXT,
-        pm           TEXT,
-        se_lead      TEXT,
-        csm          TEXT,
-        notes        TEXT,
-        blocked      INTEGER DEFAULT 0,
-        red_account  INTEGER DEFAULT 0,
-        missing_pm   INTEGER DEFAULT 0,
-        days_overdue INTEGER,
-        days_in_eap  INTEGER,
-        arr_at_risk  NUMERIC,
-        issue_type        TEXT,
-        priority          TEXT,
-        reporter          TEXT,
-        resolution        TEXT,
-        fix_version       TEXT,
-        requested_quarter TEXT,
-        target_quarter    TEXT,
-        se_region         TEXT,
-        brand             TEXT,
-        assignee          TEXT,
-        source            TEXT,
-        source_url        TEXT,
-        last_updated      TEXT,
-        synced_at    TIMESTAMP DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS sync_meta (
-        id            SERIAL PRIMARY KEY,
-        fetched_at    TIMESTAMP,
-        total_issues  INTEGER,
-        release_count INTEGER,
-        source        TEXT,
-        created_at    TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    const newCols = [
-      ['issue_type','TEXT'], ['priority','TEXT'], ['reporter','TEXT'],
-      ['resolution','TEXT'], ['fix_version','TEXT'], ['requested_quarter','TEXT'],
-      ['target_quarter','TEXT'], ['se_region','TEXT'], ['brand','TEXT'],
-      ['assignee','TEXT'], ['source','TEXT'], ['source_url','TEXT'], ['last_updated','TEXT'],
-    ];
-    for (const [col, type] of newCols) {
-      await client.query(`ALTER TABLE releases ADD COLUMN IF NOT EXISTS ${col} ${type}`).catch(() => {});
-    }
-
-    console.log('[db] PostgreSQL schema ready');
-  } finally {
-    client.release();
+export async function initDatabase() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    return { enabled: false };
   }
+  pool = new Pool({
+    connectionString: url,
+    ssl: url.includes('localhost') ? false : { rejectUnauthorized: false },
+    max: 5,
+  });
+  await ensureSchema();
+  return { enabled: true };
 }
 
-// ── Bulk upsert releases ──────────────────────────────────────────────────────
+async function ensureSchema() {
+  if (!pool) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS releases (
+      id SERIAL PRIMARY KEY,
+      partner TEXT NOT NULL,
+      product TEXT NOT NULL,
+      stage TEXT NOT NULL DEFAULT 'Planned',
+      target_date TEXT,
+      actual_date TEXT,
+      jira_number TEXT,
+      pm TEXT,
+      se_lead TEXT,
+      csm TEXT,
+      notes TEXT,
+      blocked INTEGER NOT NULL DEFAULT 0,
+      red_account INTEGER NOT NULL DEFAULT 0,
+      missing_pm INTEGER NOT NULL DEFAULT 0,
+      days_overdue INTEGER,
+      days_in_eap INTEGER,
+      arr_at_risk BIGINT,
+      UNIQUE(partner, product)
+    );
+    CREATE TABLE IF NOT EXISTS changelog (
+      id SERIAL PRIMARY KEY,
+      change_date TEXT NOT NULL,
+      partner TEXT NOT NULL,
+      product TEXT NOT NULL,
+      from_stage TEXT,
+      to_stage TEXT NOT NULL,
+      author TEXT,
+      note TEXT
+    );
+    CREATE TABLE IF NOT EXISTS ingest_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+  `);
+  await pool.query(
+    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_area TEXT'
+  );
+}
 
-export async function upsertReleases(releases) {
-  if (!releases?.length) return;
-  const client = await getPool().connect();
+function rowToRelease(row) {
+  return {
+    id: row.id,
+    partner: row.partner,
+    product: row.product,
+    product_area: row.product_area ?? null,
+    stage: row.stage,
+    target_date: row.target_date,
+    actual_date: row.actual_date,
+    jira_number: row.jira_number,
+    pm: row.pm,
+    se_lead: row.se_lead,
+    csm: row.csm,
+    notes: row.notes,
+    blocked: row.blocked,
+    red_account: row.red_account,
+    missing_pm: row.missing_pm,
+    days_overdue: row.days_overdue,
+    days_in_eap: row.days_in_eap,
+    arr_at_risk: row.arr_at_risk != null ? Number(row.arr_at_risk) : null,
+  };
+}
+
+function rowToChangelog(row) {
+  return {
+    id: row.id,
+    change_date: row.change_date,
+    partner: row.partner,
+    product: row.product,
+    from_stage: row.from_stage,
+    to_stage: row.to_stage,
+    author: row.author,
+    note: row.note,
+  };
+}
+
+export async function loadFromPostgres() {
+  if (!pool) {
+    return { releases: [], changelog: [], lastSync: null };
+  }
+  const [relRes, chRes, metaRes] = await Promise.all([
+    pool.query(
+      'SELECT id, partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes, blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk FROM releases ORDER BY partner, product'
+    ),
+    pool.query(
+      'SELECT id, change_date, partner, product, from_stage, to_stage, author, note FROM changelog ORDER BY change_date DESC'
+    ),
+    pool.query("SELECT value FROM ingest_meta WHERE key = 'last_sync'"),
+  ]);
+  return {
+    releases: relRes.rows.map(rowToRelease),
+    changelog: chRes.rows.map(rowToChangelog),
+    lastSync: metaRes.rows[0]?.value ?? null,
+  };
+}
+
+export async function replaceAllData({ releases, changelog, lastSync }) {
+  if (!pool) return;
+  const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
-    // Clear existing data and re-insert (simpler than row-by-row upsert for bulk)
     await client.query('DELETE FROM releases');
 
+    const insertRel = `
+      INSERT INTO releases (
+        partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes,
+        blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+    `;
     for (const r of releases) {
-      await client.query(`
-        INSERT INTO releases
-          (jira_key, partner, product, stage, target_date, actual_date, jira_number,
-           pm, se_lead, csm, notes, blocked, red_account, missing_pm,
-           days_overdue, days_in_eap, arr_at_risk,
-           issue_type, priority, reporter, resolution, fix_version,
-           requested_quarter, target_quarter, se_region, brand, assignee,
-           source, source_url, last_updated, synced_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
-                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,NOW())
-      `, [
-        r.jira_key    || r.jira_number || null,
-        r.partner     || null,
-        r.product     || null,
-        r.stage       || 'Dev',
-        r.target_date || null,
-        r.actual_date || null,
-        r.jira_number || null,
-        r.pm          || null,
-        r.se_lead     || null,
-        r.csm         || null,
-        r.notes       || null,
-        r.blocked     ? 1 : 0,
+      await client.query(insertRel, [
+        r.partner,
+        r.product,
+        r.product_area ?? null,
+        r.stage ?? 'Dev',
+        r.target_date ?? null,
+        r.actual_date ?? null,
+        r.jira_number ?? r.jira_key ?? null,
+        r.pm ?? null,
+        r.se_lead ?? null,
+        r.csm ?? null,
+        r.notes ?? null,
+        r.blocked ? 1 : 0,
         r.red_account ? 1 : 0,
-        r.missing_pm  ? 1 : 0,
-        r.days_overdue  ?? null,
-        r.days_in_eap   ?? null,
-        r.arr_at_risk   ?? null,
-        r.issue_type        || null,
-        r.priority          || null,
-        r.reporter          || null,
-        r.resolution        || null,
-        r.fix_version       || null,
-        r.requested_quarter || null,
-        r.target_quarter    || null,
-        r.se_region         || null,
-        r.brand             || null,
-        r.assignee          || null,
-        r.source            || null,
-        r.source_url        || null,
-        r.last_updated      || null,
+        r.missing_pm ? 1 : 0,
+        r.days_overdue ?? null,
+        r.days_in_eap ?? null,
+        r.arr_at_risk ?? null,
       ]);
     }
 
+
+    if (changelog !== null) {
+      await client.query('DELETE FROM changelog');
+      const insertCh = `
+        INSERT INTO changelog (change_date, partner, product, from_stage, to_stage, author, note)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+      `;
+      for (const c of changelog) {
+        await client.query(insertCh, [
+          c.change_date || c.date,
+          c.partner,
+          c.product,
+          c.from_stage ?? c.from ?? null,
+          c.to_stage ?? c.to,
+          c.author ?? null,
+          c.note ?? null,
+        ]);
+      }
+    }
+
+    await client.query(
+      `INSERT INTO ingest_meta (key, value) VALUES ('last_sync', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [lastSync]
+    );
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');
@@ -163,32 +191,4 @@ export async function upsertReleases(releases) {
   } finally {
     client.release();
   }
-}
-
-export async function saveSyncMeta(meta) {
-  await getPool().query(`
-    INSERT INTO sync_meta (fetched_at, total_issues, release_count, source)
-    VALUES ($1, $2, $3, $4)
-  `, [
-    meta.fetchedAt   || new Date(),
-    meta.totalIssues || 0,
-    meta.releaseCount|| 0,
-    meta.source      || 'unknown',
-  ]);
-}
-
-// ── Query helpers ─────────────────────────────────────────────────────────────
-
-export async function dbGetAllReleases() {
-  const { rows } = await getPool().query(
-    `SELECT * FROM releases ORDER BY partner, product`
-  );
-  return rows;
-}
-
-export async function dbGetLastSyncMeta() {
-  const { rows } = await getPool().query(
-    `SELECT * FROM sync_meta ORDER BY created_at DESC LIMIT 1`
-  );
-  return rows[0] || null;
 }

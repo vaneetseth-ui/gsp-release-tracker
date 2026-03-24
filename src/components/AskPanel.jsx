@@ -37,8 +37,8 @@ function Tier1Result({ result }) {
     const r = result.record;
     if (!r) return <p className="text-slate-500 text-sm">No record found for that partner/product combination.</p>;
     return (
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+      <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100">
           <div>
             <p className="font-semibold text-slate-900">{r.partner}</p>
             <p className="text-xs text-slate-500">{r.product}</p>
@@ -52,25 +52,9 @@ function Tier1Result({ result }) {
           {r.actual_date  && <div><p className="text-xs text-slate-400 mb-0.5">Actual Date</p><p className="font-medium">{r.actual_date}</p></div>}
           {r.pm           && <div><p className="text-xs text-slate-400 mb-0.5">PM</p><p className="font-medium">{r.pm}</p></div>}
           {r.se_lead      && <div><p className="text-xs text-slate-400 mb-0.5">SE Lead</p><p className="font-medium">{r.se_lead}</p></div>}
-          {r.jira_number  && <div><p className="text-xs text-slate-400 mb-0.5">Jira</p><p className="font-medium font-mono flex flex-wrap gap-1.5">{r.jira_number.split(/[,;]\s*/).map(k => k.trim()).filter(Boolean).map(k => (
-            <a key={k} href={`https://jira.ringcentral.com/browse/${k}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline hover:text-blue-900">{k}</a>
-          ))}</p></div>}
+          {r.jira_number  && <div><p className="text-xs text-slate-400 mb-0.5">Jira</p><p className="font-medium font-mono text-blue-700">{r.jira_number}</p></div>}
           {r.days_in_eap  && <div><p className="text-xs text-slate-400 mb-0.5">Days in EAP</p><p className={`font-medium ${r.days_in_eap > 90 ? 'text-red-600 font-bold' : ''}`}>{r.days_in_eap}d</p></div>}
-          {r.reporter     && <div><p className="text-xs text-slate-400 mb-0.5">Reporter</p><p className="font-medium">{r.reporter}</p></div>}
-          {r.se_region    && <div><p className="text-xs text-slate-400 mb-0.5">SE Region</p><p className="font-medium">{r.se_region}</p></div>}
-          {r.issue_type   && <div><p className="text-xs text-slate-400 mb-0.5">Type</p><p className="font-medium">{r.issue_type}</p></div>}
-          {r.priority     && <div><p className="text-xs text-slate-400 mb-0.5">Priority</p><p className="font-medium">{r.priority}</p></div>}
-          {r.requested_quarter && <div><p className="text-xs text-slate-400 mb-0.5">Requested Q</p><p className="font-medium">{r.requested_quarter}</p></div>}
-          {r.target_quarter    && <div><p className="text-xs text-slate-400 mb-0.5">Target Q</p><p className="font-medium">{r.target_quarter}</p></div>}
         </div>
-        {r.source_url && (
-          <div className="px-4 pb-2">
-            <a href={r.source_url} target="_blank" rel="noopener noreferrer"
-               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold ${r.source === 'jira' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200'} hover:opacity-80`}>
-              Open in {r.source === 'jira' ? 'Jira' : 'Monday'} <span className="text-[10px]">↗</span>
-            </a>
-          </div>
-        )}
         {r.notes && <div className="px-4 pb-4 text-xs text-slate-500 italic border-t border-slate-100 pt-3">{r.notes}</div>}
         {(r.blocked || r.red_account || r.missing_pm) && (
           <div className="px-4 pb-4 flex gap-2 flex-wrap">
@@ -88,7 +72,7 @@ function Tier1Result({ result }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{result.matchedPartner} — All Products</p>
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100">
+      <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100">
         {rows.filter(r => r.stage !== 'N/A').map((r, i) => (
           <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50">
             <span className="font-medium text-slate-800">{r.product}</span>
@@ -113,7 +97,7 @@ function Tier2Result({ result }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{rows.length} results — {label}</p>
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100 max-h-80 overflow-y-auto">
+      <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100 max-h-80 overflow-y-auto">
         {rows.map((r, i) => (
           <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50">
             <div>
@@ -134,7 +118,7 @@ function Tier3Result({ result }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{rows.length} {label}</p>
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100 max-h-80 overflow-y-auto">
+      <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100 max-h-80 overflow-y-auto">
         {rows.map((r, i) => (
           <div key={i} className="px-4 py-3 hover:bg-slate-50">
             <div className="flex items-center justify-between mb-1">
@@ -283,46 +267,48 @@ export default function AskPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full min-h-0 bg-transparent">
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 sm:px-6 py-4 flex-shrink-0 border-b border-slate-100/80">
         <div>
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Sparkles size={14} className="text-rc-orange" />
-            Ask the Tracker
+          <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2 tracking-tight">
+            <Sparkles size={15} className="text-rc-orange shrink-0" strokeWidth={1.75} />
+            Ask
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">4-tier query engine · Partners · Products · Exceptions · Escalations</p>
+          <p className="text-xs text-slate-500 mt-1 font-medium">Natural language queries across the tracker</p>
         </div>
         {messages.length > 0 && (
           <button
+            type="button"
             onClick={() => setMessages([])}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors ring-1 ring-slate-200/80"
           >
-            <RotateCcw size={12} />
+            <RotateCcw size={12} strokeWidth={1.75} />
             Clear
           </button>
         )}
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 scrollbar-thin">
 
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-6 py-8">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-2xl bg-rc-navy flex items-center justify-center mx-auto mb-3">
-                <Sparkles size={20} className="text-rc-orange" />
+          <div className="flex flex-col items-center justify-center h-full gap-8 py-10">
+            <div className="text-center max-w-md">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 ring-1 ring-slate-200/60 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <Sparkles size={22} className="text-rc-blue" strokeWidth={1.5} />
               </div>
-              <p className="text-sm font-semibold text-slate-700">Ask anything about your GSP releases</p>
-              <p className="text-xs text-slate-400 mt-1">Partner status · Exceptions · Escalation briefs · Cross-portfolio scans</p>
+              <p className="text-base font-semibold text-slate-800 tracking-tight">Ask anything about releases</p>
+              <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                Partner status, exceptions, escalations, or portfolio scans.
+              </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl">
               {SUGGESTIONS.map((s, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => handleSubmit(s)}
-                  className="text-left px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-rc-orange hover:bg-orange-50 transition-colors text-xs text-slate-600 hover:text-slate-900"
+                  className="text-left px-4 py-3 rounded-2xl bg-white/90 ring-1 ring-slate-200/70 hover:ring-sky-200 hover:bg-sky-50/40 transition-all text-xs text-slate-600 leading-snug font-medium"
                 >
                   {s}
                 </button>
@@ -337,11 +323,11 @@ export default function AskPanel() {
 
         {loading && (
           <div className="flex gap-2 items-center">
-            <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Bot size={13} className="text-white" />
+            <div className="w-8 h-8 rounded-full bg-slate-100 ring-1 ring-slate-200/80 flex items-center justify-center flex-shrink-0">
+              <Bot size={14} className="text-slate-500" strokeWidth={1.75} />
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-2.5">
-              <Loader2 size={14} className="text-slate-400 animate-spin" />
+            <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 ring-1 ring-slate-200/70 shadow-sm">
+              <Loader2 size={15} className="text-slate-400 animate-spin" strokeWidth={1.75} />
             </div>
           </div>
         )}
@@ -350,8 +336,8 @@ export default function AskPanel() {
       </div>
 
       {/* Input bar */}
-      <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-slate-200">
-        <div className="flex gap-2 items-end bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 focus-within:border-rc-orange focus-within:ring-1 focus-within:ring-rc-orange/30 transition-all">
+      <div className="flex-shrink-0 px-5 sm:px-6 py-4 bg-white/80 backdrop-blur-sm border-t border-slate-100">
+        <div className="flex gap-2 items-end bg-slate-50/80 rounded-2xl px-4 py-2.5 ring-1 ring-slate-200/70 focus-within:ring-2 focus-within:ring-sky-200/80 focus-within:bg-white transition-all">
           <textarea
             ref={inputRef}
             rows={1}
@@ -364,9 +350,10 @@ export default function AskPanel() {
             disabled={loading}
           />
           <button
+            type="button"
             onClick={() => handleSubmit()}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-8 h-8 rounded-xl bg-rc-navy hover:bg-rc-orange disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5"
+            className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-900 hover:bg-rc-blue disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5 shadow-sm"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
           </button>

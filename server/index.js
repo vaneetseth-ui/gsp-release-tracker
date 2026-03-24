@@ -3,23 +3,19 @@
  * Serves both the React build (static) and REST API endpoints
  *
  * Endpoints:
- *   GET  /api/health            — health check + sync status
+ *   GET  /api/health            — health check + last sync time
  *   GET  /api/summary           — portfolio stats
  *   GET  /api/releases          — all releases (?partner=X &product=Y &stage=Z)
  *   GET  /api/exceptions        — all exceptions (?type=blocked|red|nopm|eap)
  *   GET  /api/changelog         — recent changes (?limit=N &partner=X)
  *   POST /api/query             — natural language query → tier-routed result
- *   POST /api/sync              — pull live data from Jira (requires JIRA_PAT env var)
- *   GET  /api/sync/status       — last sync time + issue count
- *   GET  /api/sync/fields       — list all Jira custom fields (for mapping setup)
+ *   POST /api/ingest            — push releases from local Jira sync (optional Bearer INGEST_TOKEN)
  */
 import express   from 'express';
 import cors      from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as db from './db.js';
-import { syncFromJira, fetchJiraFields } from './sync_jira.js';
-import { initDb, upsertReleases, saveSyncMeta, isDbAvailable } from './database.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const PORT       = process.env.PORT || 3001;
@@ -36,105 +32,35 @@ app.use(express.static(DIST));
 app.get('/api/health', (_req, res) => {
   try {
     const summary = db.getSummary();
-    const meta    = db.getLiveMeta();
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), ...meta, summary });
+    const lastSync = db.getLastSync();
+    res.json({
+      status: 'ok',
+      dataSource: db.getDataSource(),
+      lastSync,
+      last_sync: lastSync,
+      syncedAt: lastSync,
+      timestamp: new Date().toISOString(),
+      summary,
+    });
   } catch (e) {
     res.status(503).json({ status: 'error', message: e.message });
   }
 });
 
-// ── Jira Sync ─────────────────────────────────────────────────────────────────
-let syncInProgress = false;
-
-app.post('/api/sync', async (_req, res) => {
-  if (!process.env.JIRA_PAT) {
-    return res.status(503).json({
-      error: 'JIRA_PAT environment variable not set.',
-      hint:  'Add it via: Heroku Dashboard → Settings → Config Vars → JIRA_PAT',
-    });
-  }
-  if (syncInProgress) {
-    return res.status(409).json({ error: 'Sync already in progress. Try again shortly.' });
-  }
-  syncInProgress = true;
-  try {
-    console.log('[sync] Starting Jira sync…');
-    const result = await syncFromJira();
-    db.setLiveData(result.releases, {
-      totalIssues: result.totalIssues,
-      projects:    result.projects,
-      fetchedAt:   result.fetchedAt,
-    });
-    console.log(`[sync] Done — ${result.releases.length} releases from ${result.totalIssues} Jira issues`);
-    res.json({
-      success:       true,
-      releases:      result.releases.length,
-      totalIssues:   result.totalIssues,
-      fetchedAt:     result.fetchedAt,
-      mode:          'live',
-    });
-  } catch (e) {
-    console.error('[sync] Error:', e.message);
-    res.status(500).json({ error: e.message });
-  } finally {
-    syncInProgress = false;
-  }
-});
-
-app.get('/api/sync/status', (_req, res) => {
-  res.json(db.getLiveMeta());
-});
-
-app.get('/api/sync/fields', async (_req, res) => {
-  if (!process.env.JIRA_PAT) {
-    return res.status(503).json({ error: 'JIRA_PAT not set' });
-  }
-  try {
-    const fields = await fetchJiraFields();
-    res.json({ fields, hint: 'Set JIRA_FIELD_* env vars to map these to dashboard schema' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── Ingest endpoint — called by local sync script (runs inside corporate network) ──
-// POST /api/ingest  { releases: [...], meta: { totalIssues, fetchedAt, ... } }
-// Optional bearer token auth: set INGEST_TOKEN env var on Heroku to protect the endpoint
 app.post('/api/ingest', async (req, res) => {
   const token = process.env.INGEST_TOKEN;
   if (token) {
-    const auth = req.headers['authorization'] || '';
+    const auth = req.headers.authorization;
     if (auth !== `Bearer ${token}`) {
-      return res.status(401).json({ error: 'Unauthorized — invalid INGEST_TOKEN' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
   }
-
-  const { releases, meta = {} } = req.body;
-  if (!Array.isArray(releases) || releases.length === 0) {
-    return res.status(400).json({ error: 'Body must contain a non-empty releases array' });
+  try {
+    const result = await db.applyIngest(req.body || {});
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
-
-  // Write to Postgres if available, otherwise keep in memory
-  if (isDbAvailable()) {
-    try {
-      await upsertReleases(releases);
-      await saveSyncMeta({ ...meta, source: 'local-sync', releaseCount: releases.length });
-      console.log(`[ingest] Persisted ${releases.length} releases to PostgreSQL`);
-    } catch (e) {
-      console.error('[ingest] DB write error:', e.message);
-      return res.status(500).json({ error: `DB write failed: ${e.message}` });
-    }
-  }
-
-  // Always update in-memory cache too (for immediate reads)
-  db.setLiveData(releases, { ...meta, source: 'local-sync' });
-  console.log(`[ingest] Received ${releases.length} releases from local sync script`);
-  res.json({
-    success:    true,
-    releases:   releases.length,
-    mode:       isDbAvailable() ? 'postgres' : 'live',
-    fetchedAt:  meta.fetchedAt || new Date().toISOString(),
-  });
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
@@ -272,16 +198,16 @@ app.get('*', (_req, res) => {
   res.sendFile(join(DIST, 'index.html'));
 });
 
-// ── Startup ───────────────────────────────────────────────────────────────────
-app.listen(PORT, async () => {
-  console.log(`\n🚀  GSP Release Tracker API`);
-  console.log(`   http://localhost:${PORT}/api/health`);
-  console.log(`   http://localhost:${PORT}          (React dashboard)`);
-  console.log(`   DB mode: ${isDbAvailable() ? '✓ PostgreSQL' : '⚠ mock data (no DATABASE_URL)'}\n`);
+async function start() {
+  await db.initDataStore();
+  app.listen(PORT, () => {
+    console.log(`\n🚀  GSP Release Tracker API`);
+    console.log(`   http://localhost:${PORT}/api/health`);
+    console.log(`   http://localhost:${PORT}          (React dashboard)\n`);
+  });
+}
 
-  // Init DB schema and preload data from Postgres into memory cache
-  if (isDbAvailable()) {
-    await initDb();
-    await db.ensureDataLoaded();
-  }
+start().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });

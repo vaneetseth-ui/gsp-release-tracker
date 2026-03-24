@@ -4,90 +4,111 @@
  * Slide-in PartnerView panel on partner/cell selection
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw, CheckCircle, WifiOff } from 'lucide-react';
+import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw, CheckCircle } from 'lucide-react';
 import MatrixView      from './components/MatrixView.jsx';
 import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
 import AskPanel        from './components/AskPanel.jsx';
-import TimelineFilter  from './components/TimelineFilter.jsx';
-import { DataProvider, useData } from './data/DataContext.jsx';
+import { useData }     from './context/DataContext.jsx';
 
 const TABS = [
-  { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: '17 partners × 5 products' },
+  { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: 'Partners × products by area' },
   { id: 'exceptions', label: 'Exceptions',      icon: AlertCircle,   desc: 'Blocked · Red accounts · No PM' },
   { id: 'changelog',  label: 'Changelog',       icon: Clock,         desc: 'Recent status changes' },
   { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language queries' },
 ];
 
 function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
-  const { summary } = useData();
+  const { getSummary } = useData();
+  const summary = getSummary();
 
   return (
-    <header className="bg-rc-navy text-white flex-shrink-0 shadow-lg">
-      <div className="flex items-center justify-between px-6 py-3 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-rc-orange flex items-center justify-center text-white text-xs font-black">RC</div>
-          <div>
-            <h1 className="text-sm font-bold tracking-wide">GSP Release Tracker</h1>
-            <p className="text-xs text-blue-200">PMO BuddAI · Global Strategic Partners</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex gap-4 text-xs text-blue-200">
-            <span><span className="text-white font-bold">{summary.byStage?.GA || 0}</span> GA</span>
-            <span><span className="text-white font-bold">{summary.byStage?.Beta || 0}</span> Beta</span>
-            <span><span className="text-white font-bold">{summary.byStage?.EAP || 0}</span> EAP</span>
-            {summary.blocked > 0 && (
-              <span className="text-red-300"><span className="text-red-200 font-bold">{summary.blocked}</span> Blocked</span>
-            )}
+    <header className="flex-shrink-0 border-b border-slate-200/70 bg-white/75 backdrop-blur-md shadow-soft">
+      <div className="flex flex-col gap-3 px-4 sm:px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rc-blue to-rc-navy flex items-center justify-center text-white text-xs font-bold shadow-sm ring-1 ring-slate-900/5">
+              RC
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold text-slate-900 tracking-tight truncate">
+                GSP Release Tracker
+              </h1>
+              <p className="text-xs text-slate-500 font-medium truncate">
+                Portfolio view · strategic partners
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex items-center gap-3 text-xs text-slate-500">
+              <span className="tabular-nums">
+                <span className="font-semibold text-slate-800">{summary.byStage.GA}</span> GA
+              </span>
+              <span className="w-px h-3 bg-slate-200" aria-hidden />
+              <span className="tabular-nums">
+                <span className="font-semibold text-slate-800">{summary.byStage.Beta}</span> Beta
+              </span>
+              <span className="w-px h-3 bg-slate-200" aria-hidden />
+              <span className="tabular-nums">
+                <span className="font-semibold text-slate-800">{summary.byStage.EAP}</span> EAP
+              </span>
+              {summary.blocked > 0 && (
+                <>
+                  <span className="w-px h-3 bg-slate-200" aria-hidden />
+                  <span className="text-red-600 tabular-nums">
+                    <span className="font-semibold">{summary.blocked}</span> blocked
+                  </span>
+                </>
+              )}
+            </div>
+
             {syncStatus.lastSync && (
-              <span className="hidden md:flex items-center gap-1 text-xs text-blue-200">
-                <CheckCircle size={11} className="text-green-400" />
+              <span className="hidden lg:inline-flex items-center gap-1.5 text-xs text-slate-500">
+                <CheckCircle size={12} className="text-emerald-500 shrink-0" />
                 {syncStatus.lastSync}
               </span>
             )}
             <button
+              type="button"
               onClick={onRefresh}
-              title="Data syncs automatically every hour. Click to refresh dashboard."
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
+              title="Refresh data from the server"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 ring-1 ring-slate-200/80 hover:bg-white hover:ring-slate-300 transition-colors disabled:opacity-50"
               disabled={syncStatus.checking}
             >
               <RefreshCw size={13} className={syncStatus.checking ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">{syncStatus.checking ? 'Checking…' : 'Refresh'}</span>
+              {syncStatus.checking ? 'Updating…' : 'Refresh'}
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="flex px-4 gap-1 pt-1">
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                isActive
-                  ? 'bg-slate-100 text-slate-900 shadow-sm'
-                  : 'text-blue-200 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Icon size={14} />
-              {tab.label}
-              {tab.id === 'exceptions' && summary.blocked > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white leading-none">
-                  {summary.blocked}
-                </span>
-              )}
-            </button>
-          );
-        })}
+        <nav className="flex gap-1 p-1 rounded-2xl bg-slate-100/80 ring-1 ring-slate-200/50 overflow-x-auto scrollbar-thin">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-xl whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Icon size={15} className="opacity-70 shrink-0" strokeWidth={1.75} />
+                {tab.label}
+                {tab.id === 'exceptions' && summary.blocked > 0 && (
+                  <span className="min-w-[1.25rem] h-5 px-1 flex items-center justify-center rounded-full text-[10px] font-semibold bg-red-50 text-red-700 ring-1 ring-red-100">
+                    {summary.blocked}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );
@@ -108,21 +129,25 @@ function formatSyncTime(isoString) {
   } catch { return null; }
 }
 
-function AppShell() {
+export default function App() {
+  const { refresh: refreshReleases, dataMode } = useData();
   const [activeTab, setActiveTab] = useState('matrix');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
-  const { loading, summary } = useData();
+
+  const fetchHealth = useCallback(() => {
+    return fetch('/api/health')
+      .then((r) => r.json())
+      .then((data) => {
+        const t = data.lastSync || data.last_sync || data.syncedAt;
+        setSyncStatus((s) => ({ ...s, lastSync: formatSyncTime(t) }));
+      })
+      .catch(() => setSyncStatus((s) => ({ ...s, lastSync: null })));
+  }, []);
 
   useEffect(() => {
-    fetch('/api/health')
-      .then(r => r.json())
-      .then(data => {
-        const t = data.lastSyncAt || data.lastSync || data.last_sync || data.syncedAt;
-        setSyncStatus({ checking: false, lastSync: formatSyncTime(t) });
-      })
-      .catch(() => setSyncStatus({ checking: false, lastSync: null }));
-  }, []);
+    fetchHealth().then(() => setSyncStatus((s) => ({ ...s, checking: false })));
+  }, [fetchHealth]);
 
   const handleSelectPartner = useCallback((partner) => {
     setSelectedPartner(partner);
@@ -132,15 +157,20 @@ function AppShell() {
     setSelectedPartner(release.partner);
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    setSyncStatus(s => ({ ...s, checking: true }));
-    window.location.reload();
-  }, []);
+  const handleRefresh = useCallback(async () => {
+    setSyncStatus((s) => ({ ...s, checking: true }));
+    try {
+      await refreshReleases();
+      await fetchHealth();
+    } finally {
+      setSyncStatus((s) => ({ ...s, checking: false }));
+    }
+  }, [refreshReleases, fetchHealth]);
 
   const panelOpen = !!selectedPartner;
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-transparent">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -148,61 +178,58 @@ function AppShell() {
         syncStatus={syncStatus}
       />
 
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <RefreshCw size={32} className="mx-auto mb-3 text-blue-400 animate-spin" />
-            <p className="text-sm text-slate-500">Loading live data…</p>
-          </div>
-        </div>
-      ) : (
-        <>
-        <TimelineFilter />
-        <div className="flex flex-1 overflow-hidden">
-          <main className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 ${panelOpen ? 'lg:mr-0' : ''}`}>
-            {activeTab === 'matrix' && (
-              <MatrixView
-                onSelectPartner={handleSelectPartner}
-                onSelectRelease={handleSelectRelease}
-              />
-            )}
-            {activeTab === 'exceptions' && (
-              <ExceptionPanel onSelectPartner={handleSelectPartner} />
-            )}
-            {activeTab === 'changelog' && (
-              <ChangelogFeed onSelectPartner={handleSelectPartner} />
-            )}
-            {activeTab === 'ask' && (
-              <AskPanel />
-            )}
-          </main>
+      {/* Main content area + optional side panel */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main pane */}
+        <main
+          className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 min-w-0 ${panelOpen ? 'lg:mr-0' : ''}`}
+        >
+          {activeTab === 'matrix' && (
+            <MatrixView
+              onSelectPartner={handleSelectPartner}
+              onSelectRelease={handleSelectRelease}
+            />
+          )}
+          {activeTab === 'exceptions' && (
+            <ExceptionPanel onSelectPartner={handleSelectPartner} />
+          )}
+          {activeTab === 'changelog' && (
+            <ChangelogFeed onSelectPartner={handleSelectPartner} />
+          )}
+          {activeTab === 'ask' && (
+            <AskPanel />
+          )}
+        </main>
 
-          <div
-            className={`
-              flex-shrink-0 overflow-hidden bg-white border-l border-slate-200 shadow-xl
-              transition-all duration-300 ease-in-out
-              ${panelOpen ? 'w-full sm:w-96 md:w-[420px]' : 'w-0'}
-            `}
-          >
-            {panelOpen && (
-              <PartnerView
-                partner={selectedPartner}
-                onClose={() => setSelectedPartner(null)}
-              />
-            )}
-          </div>
+        {/* Partner side panel */}
+        <div
+          className={`
+            flex-shrink-0 overflow-hidden bg-surface-card shadow-panel
+            transition-all duration-300 ease-out
+            ${panelOpen ? 'w-full sm:w-96 md:w-[420px]' : 'w-0'}
+          `}
+        >
+          {panelOpen && (
+            <PartnerView
+              partner={selectedPartner}
+              onClose={() => setSelectedPartner(null)}
+            />
+          )}
         </div>
-        </>
-      )}
+      </div>
 
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-1.5 bg-white border-t border-slate-200 text-xs text-slate-400">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            {summary.mode === 'postgres' ? 'Live (Postgres)' : summary.mode === 'live' ? 'Live (memory)' : 'Mock data'}
+      {/* Status bar */}
+      <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm border-t border-slate-200/60 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${dataMode === 'live' ? 'bg-emerald-400' : 'bg-amber-400'}`}
+            />
+            <span className="font-medium text-slate-600">
+              {dataMode === 'live' ? 'Live data' : 'Demo data'}
+            </span>
           </span>
-          <span>Sources: Jira · Monday · PostgreSQL</span>
-          <span>{summary.total || 0} releases</span>
+          <span className="text-slate-400 hidden sm:inline">Jira · Monday · Confluence · Sheets · Postgres</span>
         </div>
         <span>
           {panelOpen && (
@@ -214,13 +241,5 @@ function AppShell() {
         </span>
       </div>
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <DataProvider refreshKey={0}>
-      <AppShell />
-    </DataProvider>
   );
 }

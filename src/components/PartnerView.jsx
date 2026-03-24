@@ -3,9 +3,10 @@
  * Shows all releases for a partner + key contacts + exceptions
  */
 import React from 'react';
-import { X, ExternalLink, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2, Tag, MapPin, Flag } from 'lucide-react';
-import { PRODUCTS, STAGES } from '../data/constants.js';
-import { useData } from '../data/DataContext.jsx';
+import { X, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { STAGES } from '../data/mockData.js';
+import { useData } from '../context/DataContext.jsx';
+import ProductAreaBadge from './ProductAreaBadge.jsx';
 
 function ContactBadge({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -21,35 +22,9 @@ function ContactBadge({ icon: Icon, label, value }) {
 function StageChip({ stage }) {
   const s = STAGES[stage] || STAGES['N/A'];
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${s.badge}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold ${s.badge}`}>
       {s.label}
     </span>
-  );
-}
-
-function SourceBadge({ source, sourceUrl }) {
-  if (!source) return null;
-  const isJira = source === 'jira';
-  const label = isJira ? 'Jira' : 'Monday';
-  const colors = isJira ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200';
-  if (sourceUrl) {
-    return (
-      <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
-         className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors} hover:opacity-80`}>
-        {label} <ExternalLink size={8} />
-      </a>
-    );
-  }
-  return <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors}`}>{label}</span>;
-}
-
-function MetaRow({ label, value }) {
-  if (!value) return null;
-  return (
-    <div className="text-xs text-slate-500">
-      <span className="text-slate-400">{label}:</span>{' '}
-      <span className="font-medium text-slate-700">{value}</span>
-    </div>
   );
 }
 
@@ -61,35 +36,30 @@ function ReleaseCard({ release }) {
     (release.daysInEAP && release.daysInEAP > 90);
 
   return (
-    <div className={`rounded-lg border p-3 space-y-2 transition-all ${release.blocked ? 'border-red-300 bg-red-50' : hasAlert ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}>
+    <div
+      className={`rounded-2xl p-4 space-y-3 transition-all ring-1 shadow-sm ${
+        release.blocked
+          ? 'bg-white ring-red-100 border-l-[3px] border-l-red-400'
+          : hasAlert
+            ? 'bg-white ring-amber-100/80 border-l-[3px] border-l-amber-400'
+            : 'bg-white ring-slate-200/60 border-l-[3px] border-l-transparent'
+      }`}
+    >
+      {/* Header row */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-semibold text-sm text-slate-800">{release.product}</span>
-            {release.issueType && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                <Tag size={8} /> {release.issueType}
-              </span>
-            )}
-            {release.priority && release.priority !== 'Normal' && (
-              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${release.priority === 'Critical' || release.priority === 'Blocker' ? 'bg-red-100 text-red-700' : release.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>
-                <Flag size={8} /> {release.priority}
-              </span>
-            )}
+            <ProductAreaBadge area={release.productArea || release.product_area} />
           </div>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            {(release.jiraKeys || []).map(j => (
-              <a key={j.key} href={j.url} target="_blank" rel="noopener noreferrer"
-                 className="text-xs text-blue-600 font-mono hover:underline hover:text-blue-800">
-                {j.key}
-              </a>
-            ))}
-            <SourceBadge source={release.source} sourceUrl={release.sourceUrl} />
-          </div>
+          {release.jira && (
+            <span className="text-xs text-blue-600 font-mono">{release.jira}</span>
+          )}
         </div>
         <StageChip stage={release.stage} />
       </div>
 
+      {/* Alert flags */}
       {hasAlert && (
         <div className="flex flex-wrap gap-1.5">
           {release.blocked && (
@@ -99,7 +69,7 @@ function ReleaseCard({ release }) {
           )}
           {release.redAccount && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-              <DollarSign size={10} /> Red Account {release.arrAtRisk ? `· $${(release.arrAtRisk / 1000).toFixed(0)}K ARR` : ''}
+              <DollarSign size={10} /> Red Account · ${(release.arrAtRisk / 1000).toFixed(0)}K ARR at risk
             </span>
           )}
           {release.missingPM && (
@@ -115,7 +85,8 @@ function ReleaseCard({ release }) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+      {/* Dates */}
+      <div className="flex gap-4 text-xs">
         {release.target_date && (
           <div className="flex items-center gap-1 text-slate-500">
             <Calendar size={11} />
@@ -128,29 +99,16 @@ function ReleaseCard({ release }) {
             <span>Live: <span className="font-medium">{release.actual_date}</span></span>
           </div>
         )}
-        {release.seRegion && (
-          <div className="flex items-center gap-1 text-slate-500">
-            <MapPin size={11} />
-            <span className="font-medium text-slate-700">{release.seRegion}</span>
-          </div>
-        )}
       </div>
 
+      {/* Contacts */}
       <div className="grid grid-cols-2 gap-1">
-        <ContactBadge icon={Briefcase}      label="PM"       value={release.pm} />
-        <ContactBadge icon={User}           label="SE"       value={release.se_lead} />
-        <ContactBadge icon={HeartHandshake} label="CSM"      value={release.csm} />
-        <ContactBadge icon={User}           label="Reporter" value={release.reporter} />
+        <ContactBadge icon={Briefcase}      label="PM"  value={release.pm} />
+        <ContactBadge icon={User}           label="SE"  value={release.se_lead} />
+        <ContactBadge icon={HeartHandshake} label="CSM" value={release.csm} />
       </div>
 
-      <div className="grid grid-cols-2 gap-1 text-xs text-slate-500">
-        <MetaRow label="Requested Q" value={release.requestedQuarter} />
-        <MetaRow label="Target Q"    value={release.targetQuarter} />
-        <MetaRow label="Fix Ver"     value={release.fixVersion} />
-        <MetaRow label="Brand"       value={release.brand} />
-        <MetaRow label="Resolution"  value={release.resolution !== 'Unresolved' ? release.resolution : null} />
-      </div>
-
+      {/* Notes */}
       {release.notes && (
         <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-2 mt-1">
           {release.notes}
@@ -161,16 +119,18 @@ function ReleaseCard({ release }) {
 }
 
 export default function PartnerView({ partner, onClose }) {
+  const { getPartnerReleases, matrixProductOrder } = useData();
   if (!partner) return null;
-  const { getPartnerReleases } = useData();
 
   const releases = getPartnerReleases(partner);
   const activeReleases = releases.filter(r => r.stage !== 'N/A');
   const naCount = releases.filter(r => r.stage === 'N/A').length;
 
+  // Get representative contact info
   const rep = activeReleases.find(r => r.csm) || releases[0];
   const csm = rep?.csm;
 
+  // Stage summary
   const stageCounts = {};
   activeReleases.forEach(r => {
     stageCounts[r.stage] = (stageCounts[r.stage] || 0) + 1;
@@ -181,47 +141,73 @@ export default function PartnerView({ partner, onClose }) {
   );
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
-      <div className="flex items-center justify-between px-4 py-3 bg-rc-navy text-white flex-shrink-0">
-        <div>
-          <h2 className="text-lg font-bold">{partner}</h2>
-          <p className="text-xs text-blue-200">
-            {activeReleases.length} active release{activeReleases.length !== 1 ? 's' : ''}
-            {exceptions.length > 0 && <span className="text-red-300 ml-2">· {exceptions.length} exception{exceptions.length > 1 ? 's' : ''}</span>}
+    <div className="flex flex-col h-full bg-gradient-to-b from-slate-50/80 to-white">
+      <div className="flex items-start justify-between gap-3 px-5 py-4 flex-shrink-0 border-b border-slate-100 bg-white/90 backdrop-blur-sm">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-slate-900 tracking-tight">{partner}</h2>
+          <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+            {activeReleases.length} active · {naCount} n/a
+            {exceptions.length > 0 && (
+              <span className="text-red-600 ml-1">
+                · {exceptions.length} exception{exceptions.length > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         <button
+          type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
           aria-label="Close panel"
         >
-          <X size={18} />
+          <X size={18} strokeWidth={1.75} />
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 px-4 py-2.5 bg-white border-b border-slate-200 flex-shrink-0">
+      <div className="flex flex-wrap gap-2 px-5 py-3 flex-shrink-0 border-b border-slate-100/80 bg-white/50">
         {Object.entries(stageCounts).map(([stage, count]) => (
-          <span key={stage} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGES[stage]?.badge || 'bg-gray-100 text-gray-600'}`}>
-            {stage} <span className="font-bold">{count}</span>
+          <span
+            key={stage}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium ${STAGES[stage]?.badge || 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'}`}
+          >
+            {stage} <span className="tabular-nums font-semibold">{count}</span>
           </span>
         ))}
         {csm && (
-          <span className="ml-auto text-xs text-slate-500 flex items-center gap-1">
-            <HeartHandshake size={12} className="text-slate-400" />
-            CSM: <span className="font-medium text-slate-700">{csm}</span>
+          <span className="w-full sm:w-auto sm:ml-auto text-xs text-slate-500 flex items-center gap-1.5 pt-1 sm:pt-0">
+            <HeartHandshake size={13} className="text-slate-400 shrink-0" strokeWidth={1.75} />
+            <span className="font-medium text-slate-700">{csm}</span>
           </span>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-2.5">
-        {activeReleases.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
-            <p className="text-sm">No active releases for {partner}</p>
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-3 min-h-0">
+        {matrixProductOrder.map((product) => {
+          const release = releases.find((r) => r.product === product);
+          if (!release || release.stage === 'N/A') return null;
+          return <ReleaseCard key={product} release={release} />;
+        })}
+
+        {/* N/A products listed compactly */}
+        {naCount > 0 && (
+          <div className="rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/50 px-4 py-3">
+            <p className="text-[11px] text-slate-400 font-medium mb-2 uppercase tracking-wide">Not applicable</p>
+            <div className="flex flex-wrap gap-1.5">
+              {matrixProductOrder
+                .filter((p) => {
+                  const r = releases.find((x) => x.product === p);
+                  return !r || r.stage === 'N/A';
+                })
+                .map((p) => (
+                  <span
+                    key={p}
+                    className="text-[11px] px-2 py-1 bg-white text-slate-400 rounded-lg ring-1 ring-slate-200/60"
+                  >
+                    {p}
+                  </span>
+                ))}
+            </div>
           </div>
-        ) : (
-          activeReleases.map((release, idx) => (
-            <ReleaseCard key={`${release.product}-${release.jira}-${idx}`} release={release} />
-          ))
         )}
       </div>
     </div>

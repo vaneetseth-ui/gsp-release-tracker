@@ -1,10 +1,12 @@
 /**
  * GSP Release Tracker — Mock Dataset  v1.0
- * 17 Partners × 5 Products = 85 records
+ * 17 Partners × products per PRODUCT_AREAS in constants.js
  * Includes realistic exceptions: blocked items, overdue targets, SFDC red accounts
  */
 
-export const PRODUCTS = ['Nova IVA', 'RingCX', 'AIR', 'MVP', 'ACO'];
+import { MATRIX_PRODUCT_ORDER } from './constants.js';
+
+export const PRODUCTS = MATRIX_PRODUCT_ORDER;
 
 export const PARTNERS = [
   'AT&T O@H', 'Avaya ACO', 'BT', 'Charter ENT', 'Charter SMB',
@@ -13,15 +15,15 @@ export const PARTNERS = [
   'Versatel', 'Vodafone',
 ];
 
-// Canonical stages with display info
+// Canonical stages — soft pills (ring + light fill) for readability
 export const STAGES = {
-  GA:       { label: 'GA',       color: 'bg-emerald-500', text: 'text-white',      badge: 'bg-emerald-100 text-emerald-800',  order: 1 },
-  Beta:     { label: 'Beta',     color: 'bg-blue-500',    text: 'text-white',      badge: 'bg-blue-100 text-blue-800',        order: 2 },
-  EAP:      { label: 'EAP',      color: 'bg-amber-400',   text: 'text-gray-900',   badge: 'bg-amber-100 text-amber-800',      order: 3 },
-  Dev:      { label: 'Dev',      color: 'bg-orange-400',  text: 'text-white',      badge: 'bg-orange-100 text-orange-800',    order: 4 },
-  Planned:  { label: 'Planned',  color: 'bg-slate-400',   text: 'text-white',      badge: 'bg-slate-100 text-slate-700',      order: 5 },
-  Blocked:  { label: 'Blocked',  color: 'bg-red-500',     text: 'text-white',      badge: 'bg-red-100 text-red-800',          order: 6 },
-  'N/A':    { label: 'N/A',      color: 'bg-gray-200',    text: 'text-gray-400',   badge: 'bg-gray-100 text-gray-400',        order: 7 },
+  GA:       { label: 'GA',       color: 'bg-emerald-500', text: 'text-white', badge: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100/90',  order: 1 },
+  Beta:     { label: 'Beta',     color: 'bg-blue-500',    text: 'text-white', badge: 'bg-sky-50 text-sky-800 ring-1 ring-sky-100/90',            order: 2 },
+  EAP:      { label: 'EAP',      color: 'bg-amber-400',   text: 'text-gray-900', badge: 'bg-amber-50 text-amber-900 ring-1 ring-amber-100/90', order: 3 },
+  Dev:      { label: 'Dev',      color: 'bg-orange-400',  text: 'text-white', badge: 'bg-orange-50 text-orange-900 ring-1 ring-orange-100/80', order: 4 },
+  Planned:  { label: 'Planned',  color: 'bg-slate-400',   text: 'text-white', badge: 'bg-slate-50 text-slate-700 ring-1 ring-slate-200/80',   order: 5 },
+  Blocked:  { label: 'Blocked',  color: 'bg-red-500',     text: 'text-white', badge: 'bg-red-50 text-red-800 ring-1 ring-red-100/90',       order: 6 },
+  'N/A':    { label: 'N/A',      color: 'bg-gray-200',    text: 'text-gray-400', badge: 'bg-slate-50 text-slate-400 ring-1 ring-slate-100', order: 7 },
 };
 
 // ─── Release Records ──────────────────────────────────────────────────────────

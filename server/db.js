@@ -1,149 +1,203 @@
 /**
- * server/db.js — Unified query layer
- *
- * Data priority:
- *   1. PostgreSQL (when DATABASE_URL env var is set — Heroku Postgres addon)
- *   2. liveCache  — in-memory data pushed via /api/ingest
- *   3. MOCK_RELEASES — hardcoded fallback until first sync
+ * db.js — in-memory store with optional PostgreSQL persistence
  */
-import { RELEASES as MOCK_RELEASES, CHANGELOG } from './data.js';
-import {
-  isDbAvailable, dbGetAllReleases, dbGetLastSyncMeta,
-} from './database.js';
+import { RELEASES as SEED_RELEASES, CHANGELOG as SEED_CHANGELOG } from './data.js';
+import { initDatabase, loadFromPostgres, replaceAllData } from './database.js';
+import { normalizeProductArea } from '../src/data/constants.js';
 
-// ── In-memory live cache (used when no DB) ─────────────────────────────────────
-let liveCache  = null;
-let lastSyncAt = null;
-let lastSyncMeta = null;
+/** @type {{ releases: object[], changelog: object[], lastSync: string|null, dataSource: string }} */
+let store = {
+  releases: [],
+  changelog: [],
+  lastSync: null,
+  dataSource: 'memory',
+};
 
-export function setLiveData(releases, meta = {}) {
-  liveCache    = releases;
-  lastSyncAt   = new Date().toISOString();
-  lastSyncMeta = meta;
+function flag(v) {
+  return v === 1 || v === true || v === '1';
 }
 
-export function getLiveMeta() {
+export async function initDataStore() {
+  store.releases = SEED_RELEASES.map((r) => normalizeRelease(r));
+  store.changelog = [...SEED_CHANGELOG];
+  store.lastSync = null;
+  store.dataSource = 'memory';
+
+  const { enabled } = await initDatabase();
+  if (!enabled) return;
+
+  try {
+    const data = await loadFromPostgres();
+    if (data.releases.length > 0) {
+      store.releases = data.releases.map((r) => normalizeRelease(r));
+      store.changelog = data.changelog.length ? data.changelog : store.changelog;
+      store.lastSync = data.lastSync;
+      store.dataSource = 'postgres';
+    }
+  } catch (e) {
+    console.error('initDataStore: Postgres load failed, using seed data:', e.message);
+  }
+}
+
+export function getLastSync() {
+  return store.lastSync;
+}
+
+export function getDataSource() {
+  return store.dataSource;
+}
+
+export async function applyIngest({ releases, changelog, meta }) {
+  if (!releases?.length) {
+    throw new Error('releases array required');
+  }
+  const lastSync = meta?.fetchedAt || new Date().toISOString();
+  store.releases = releases.map(normalizeRelease);
+  if (changelog !== undefined) {
+    store.changelog = (changelog || []).map(normalizeChangelog);
+  }
+  store.lastSync = lastSync;
+  store.dataSource = process.env.DATABASE_URL ? 'postgres' : 'memory';
+
+  try {
+    await replaceAllData({
+      releases: store.releases,
+      changelog: changelog !== undefined ? store.changelog : null,
+      lastSync,
+    });
+  } catch (e) {
+    console.error('applyIngest: persist failed:', e.message);
+    throw e;
+  }
+
+  return { releases: store.releases.length, lastSync };
+}
+
+function normalizeRelease(r) {
+  const product = r.product;
   return {
-    mode:       isDbAvailable() ? 'postgres' : (liveCache ? 'live' : 'mock'),
-    lastSyncAt,
-    issueCount: liveCache?.length ?? MOCK_RELEASES.length,
-    ...lastSyncMeta,
+    id: r.id,
+    partner: r.partner,
+    product,
+    product_area: normalizeProductArea(r.product_area, product),
+    stage: r.stage ?? 'Dev',
+    target_date: r.target_date ?? null,
+    actual_date: r.actual_date ?? null,
+    jira_number: r.jira_number ?? r.jira_key ?? null,
+    pm: r.pm ?? null,
+    se_lead: r.se_lead ?? null,
+    csm: r.csm ?? null,
+    notes: r.notes ?? null,
+    blocked: flag(r.blocked) ? 1 : 0,
+    red_account: flag(r.red_account) ? 1 : 0,
+    missing_pm: flag(r.missing_pm) ? 1 : 0,
+    days_overdue: r.days_overdue ?? null,
+    days_in_eap: r.days_in_eap ?? null,
+    arr_at_risk: r.arr_at_risk != null ? Number(r.arr_at_risk) : null,
   };
 }
 
-// ── Data source resolver ───────────────────────────────────────────────────────
-// Synchronous — uses liveCache or mock (Postgres queries are handled separately via async wrappers)
-function DATA() {
-  return liveCache ?? MOCK_RELEASES;
+function normalizeChangelog(c) {
+  return {
+    id: c.id,
+    change_date: c.change_date || c.date,
+    partner: c.partner,
+    product: c.product,
+    from_stage: c.from_stage ?? c.from ?? null,
+    to_stage: c.to_stage ?? c.to,
+    author: c.author ?? null,
+    note: c.note ?? null,
+  };
 }
 
-// ── Async wrapper: preloads Postgres data into liveCache on first call ─────────
-let pgLoadPromise = null;
-
-export async function ensureDataLoaded() {
-  if (!isDbAvailable()) return;
-  if (liveCache !== null) return; // already loaded
-  if (pgLoadPromise) return pgLoadPromise;
-
-  pgLoadPromise = (async () => {
-    try {
-      const rows = await dbGetAllReleases();
-      const meta = await dbGetLastSyncMeta();
-      if (rows.length > 0) {
-        liveCache  = rows;
-        lastSyncAt = meta?.created_at?.toISOString() || null;
-        lastSyncMeta = { totalIssues: meta?.total_issues, source: meta?.source };
-        console.log(`[db] Loaded ${rows.length} releases from PostgreSQL`);
-      }
-    } catch (e) {
-      console.error('[db] Failed to load from Postgres:', e.message);
-    } finally {
-      pgLoadPromise = null;
-    }
-  })();
-  return pgLoadPromise;
+function R() {
+  return store.releases;
 }
-
-// ── Releases ──────────────────────────────────────────────────────────────────
 
 export function getAllReleases() {
-  return [...DATA()].sort((a, b) => a.partner?.localeCompare(b.partner) || a.product?.localeCompare(b.product));
+  return [...R()].sort((a, b) => a.partner.localeCompare(b.partner) || a.product.localeCompare(b.product));
 }
 
 export function getReleasesByPartner(partner) {
-  return DATA().filter(r => r.partner === partner).sort((a, b) => a.product?.localeCompare(b.product));
+  return R().filter(r => r.partner === partner).sort((a, b) => a.product.localeCompare(b.product));
 }
 
 export function getRelease(partner, product) {
-  return DATA().find(r => r.partner === partner && r.product === product) || null;
+  return R().find(r => r.partner === partner && r.product === product) || null;
 }
 
 export function getReleasesByStage(stage) {
-  return DATA().filter(r => r.stage === stage && r.stage !== 'N/A').sort((a, b) => a.partner?.localeCompare(b.partner));
+  return R().filter(r => r.stage === stage && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
 }
 
 export function getReleasesByProduct(product) {
-  return DATA().filter(r => r.product === product && r.stage !== 'N/A').sort((a, b) => a.partner?.localeCompare(b.partner));
+  return R().filter(r => r.product === product && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
 }
 
-// ── Exceptions ────────────────────────────────────────────────────────────────
-
 export function getExceptions() {
-  return DATA()
-    .filter(r => r.blocked || r.red_account || r.missing_pm || (r.days_in_eap && r.days_in_eap > 90))
+  return R()
+    .filter(r => flag(r.blocked) || flag(r.red_account) || flag(r.missing_pm) || (r.days_in_eap > 90))
     .sort((a, b) => {
-      const rank = r => r.blocked ? 0 : r.red_account ? 1 : (r.days_in_eap > 90) ? 2 : 3;
-      return rank(a) - rank(b) || a.partner?.localeCompare(b.partner);
+      const rank = x =>
+        flag(x.blocked) ? 0 : flag(x.red_account) ? 1 : x.days_in_eap > 90 ? 2 : 3;
+      return rank(a) - rank(b) || a.partner.localeCompare(b.partner);
     });
 }
 
 export function getBlocked() {
-  return DATA().filter(r => r.blocked).sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0));
+  return R()
+    .filter(r => flag(r.blocked))
+    .sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0));
 }
 
 export function getRedAccounts() {
-  return DATA().filter(r => r.red_account).sort((a, b) => (b.arr_at_risk || 0) - (a.arr_at_risk || 0));
+  return R()
+    .filter(r => flag(r.red_account))
+    .sort((a, b) => (b.arr_at_risk || 0) - (a.arr_at_risk || 0));
 }
 
 export function getMissingPM() {
-  return DATA().filter(r => r.missing_pm).sort((a, b) => a.partner?.localeCompare(b.partner));
+  return R()
+    .filter(r => flag(r.missing_pm))
+    .sort((a, b) => a.partner.localeCompare(b.partner));
 }
 
 export function getOverdueEAP() {
-  return DATA().filter(r => r.days_in_eap > 90 && !r.blocked).sort((a, b) => (b.days_in_eap || 0) - (a.days_in_eap || 0));
+  return R()
+    .filter(r => (r.days_in_eap > 90 || 0) && !flag(r.blocked))
+    .sort((a, b) => (b.days_in_eap || 0) - (a.days_in_eap || 0));
 }
 
-// ── Changelog ─────────────────────────────────────────────────────────────────
-
 export function getChangelog(limit = 50) {
-  return [...CHANGELOG].sort((a, b) => b.change_date.localeCompare(a.change_date)).slice(0, limit);
+  return [...store.changelog]
+    .sort((a, b) => b.change_date.localeCompare(a.change_date))
+    .slice(0, limit);
 }
 
 export function getChangelogByPartner(partner) {
-  return CHANGELOG.filter(c => c.partner === partner).sort((a, b) => b.change_date.localeCompare(a.change_date));
+  return store.changelog
+    .filter(c => c.partner === partner)
+    .sort((a, b) => b.change_date.localeCompare(a.change_date));
 }
 
-// ── Summary stats ─────────────────────────────────────────────────────────────
-
 export function getSummary() {
-  const d = DATA();
-  const active = d.filter(r => r.stage !== 'N/A');
+  const rel = R();
+  const active = rel.filter(r => r.stage !== 'N/A');
+
   const byStage = {};
-  active.forEach(r => { byStage[r.stage] = (byStage[r.stage] || 0) + 1; });
+  active.forEach(r => {
+    byStage[r.stage] = (byStage[r.stage] || 0) + 1;
+  });
 
   return {
-    total:       active.length,
+    total: active.length,
     byStage,
-    blocked:     d.filter(r => r.blocked).length,
-    redAccounts: d.filter(r => r.red_account).length,
-    missingPM:   d.filter(r => r.missing_pm).length,
-    mode:        isDbAvailable() ? 'postgres' : (liveCache ? 'live' : 'mock'),
-    lastSyncAt,
+    blocked: rel.filter(r => flag(r.blocked)).length,
+    redAccounts: rel.filter(r => flag(r.red_account)).length,
+    missingPM: rel.filter(r => flag(r.missing_pm)).length,
   };
 }
 
-// ── Partners list ─────────────────────────────────────────────────────────────
-
 export function getPartners() {
-  return [...new Set(DATA().map(r => r.partner).filter(Boolean))].sort();
+  return [...new Set(R().map(r => r.partner))].sort();
 }

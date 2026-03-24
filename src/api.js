@@ -24,16 +24,13 @@ async function post(path, body) {
 }
 
 export const api = {
-  health:      ()          => get('/health'),
-  summary:     ()          => get('/summary'),
-  partners:    ()          => get('/partners'),
-  releases:    (params={}) => get('/releases' + toQS(params)),
-  exceptions:  (type)      => get('/exceptions' + (type ? `?type=${type}` : '')),
-  changelog:   (params={}) => get('/changelog' + toQS(params)),
-  query:       (q)         => post('/query', { q }),
-  sync:        ()          => post('/sync', {}),
-  syncStatus:  ()          => get('/sync/status'),
-  syncFields:  ()          => get('/sync/fields'),
+  health:     ()          => get('/health'),
+  summary:    ()          => get('/summary'),
+  partners:   ()          => get('/partners'),
+  releases:   (params={}) => get('/releases' + toQS(params)),
+  exceptions: (type)      => get('/exceptions' + (type ? `?type=${type}` : '')),
+  changelog:  (params={}) => get('/changelog' + toQS(params)),
+  query:      (q)         => post('/query', { q }),
 };
 
 function toQS(params) {

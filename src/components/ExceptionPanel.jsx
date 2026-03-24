@@ -1,65 +1,64 @@
 /**
- * ExceptionPanel — exception detection view
+ * ExceptionPanel — Tier 3 exception detection view
  * Shows all partners with: blocked items, overdue EAP, red accounts, missing PMs
  */
-import React, { useState } from 'react';
-import { AlertCircle, DollarSign, UserX, AlertTriangle, Clock, Filter, ExternalLink } from 'lucide-react';
-import { STAGES } from '../data/constants.js';
-import { useData } from '../data/DataContext.jsx';
+import React, { useState, useMemo } from 'react';
+import { AlertCircle, DollarSign, UserX, AlertTriangle, Clock, Filter } from 'lucide-react';
+import { STAGES } from '../data/mockData.js';
+import { useData } from '../context/DataContext.jsx';
+import ProductAreaBadge from './ProductAreaBadge.jsx';
 
 const EXCEPTION_TYPES = {
-  blocked:    { label: 'Blocked',       icon: AlertCircle,  color: 'text-red-600',    bg: 'bg-red-50 border-red-200',    badge: 'bg-red-100 text-red-700'    },
-  redAccount: { label: 'Red Account',   icon: DollarSign,   color: 'text-red-600',    bg: 'bg-red-50 border-red-200',    badge: 'bg-red-100 text-red-700'    },
-  missingPM:  { label: 'No PM',         icon: UserX,        color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200',badge: 'bg-amber-100 text-amber-700' },
-  overdueEAP: { label: 'Overdue EAP',   icon: AlertTriangle,color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200',badge: 'bg-amber-100 text-amber-700' },
+  blocked:    { label: 'Blocked',       icon: AlertCircle,  color: 'text-red-600',    accent: 'border-l-red-400', badge: 'bg-red-50 text-red-800 ring-1 ring-red-100/80' },
+  redAccount: { label: 'Red Account',   icon: DollarSign,   color: 'text-red-600',    accent: 'border-l-red-400', badge: 'bg-red-50 text-red-800 ring-1 ring-red-100/80' },
+  missingPM:  { label: 'No PM',         icon: UserX,        color: 'text-amber-700', accent: 'border-l-amber-400', badge: 'bg-amber-50 text-amber-900 ring-1 ring-amber-100/80' },
+  overdueEAP: { label: 'Overdue EAP',   icon: AlertTriangle,color: 'text-amber-700', accent: 'border-l-amber-400', badge: 'bg-amber-50 text-amber-900 ring-1 ring-amber-100/80' },
 };
 
 function ExceptionCard({ release, types, onSelectPartner }) {
+  const accent = EXCEPTION_TYPES[types[0]]?.accent || 'border-l-slate-200';
   return (
-    <div className={`rounded-lg border p-3 space-y-2 ${types[0] === 'blocked' || types[0] === 'redAccount' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
-      <div className="flex items-start justify-between">
-        <div>
+    <div
+      className={`rounded-2xl bg-white p-4 space-y-3 shadow-sm ring-1 ring-slate-200/50 border-l-[3px] ${accent}`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0">
           <button
-            className="font-semibold text-sm text-blue-700 hover:underline"
+            type="button"
+            className="font-semibold text-sm text-slate-900 hover:text-rc-blue text-left transition-colors"
             onClick={() => onSelectPartner(release.partner)}
           >
             {release.partner}
           </button>
-          <div className="text-xs text-slate-500 mt-0.5">{release.product} · <span className={`font-semibold ${STAGES[release.stage]?.badge}`}>{release.stage}</span></div>
+          <div className="text-[11px] text-slate-500 mt-1.5 flex flex-wrap items-center gap-1.5 leading-relaxed">
+            <span className="font-medium text-slate-700">{release.product}</span>
+            <ProductAreaBadge area={release.productArea || release.product_area} />
+            <span className="text-slate-300">·</span>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${STAGES[release.stage]?.badge}`}>
+              {release.stage}
+            </span>
+          </div>
         </div>
-        <div className="flex gap-1">
-          {types.map(t => {
+        <div className="flex flex-wrap gap-1.5 shrink-0">
+          {types.map((t) => {
             const cfg = EXCEPTION_TYPES[t];
             const Icon = cfg.icon;
             return (
-              <span key={t} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
-                <Icon size={10} /> {cfg.label}
+              <span
+                key={t}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${cfg.badge}`}
+              >
+                <Icon size={11} strokeWidth={2} /> {cfg.label}
               </span>
             );
           })}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-slate-600 items-center">
-        {(release.jiraKeys || []).map(j => (
-          <a key={j.key} href={j.url} target="_blank" rel="noopener noreferrer"
-             className="font-mono text-blue-600 hover:underline hover:text-blue-800">
-            {j.key}
-          </a>
-        ))}
-        {release.source && (() => {
-          const isJira = release.source === 'jira';
-          const label = isJira ? 'Jira' : 'Monday';
-          const colors = isJira ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200';
-          return release.sourceUrl ? (
-            <a href={release.sourceUrl} target="_blank" rel="noopener noreferrer"
-               className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors} hover:opacity-80`}>
-              {label} <ExternalLink size={8} />
-            </a>
-          ) : (
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors}`}>{label}</span>
-          );
-        })()}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600">
+        {release.jira && (
+          <span className="font-mono text-blue-600">{release.jira}</span>
+        )}
         {release.daysOverdue > 0 && (
           <span className="flex items-center gap-1 text-red-600 font-semibold">
             <Clock size={11} /> {release.daysOverdue} days overdue
@@ -78,21 +77,17 @@ function ExceptionCard({ release, types, onSelectPartner }) {
         {release.target_date && (
           <span className="text-slate-500">Target: {release.target_date}</span>
         )}
-        {release.seRegion && (
-          <span className="text-slate-500">Region: <span className="font-medium text-slate-700">{release.seRegion}</span></span>
-        )}
       </div>
 
-      <div className="flex gap-4 text-xs text-slate-500">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
         {release.pm         && <span>PM: <span className="font-medium text-slate-700">{release.pm}</span></span>}
         {!release.pm        && <span className="text-amber-600 font-medium flex items-center gap-0.5"><UserX size={10} /> PM unassigned</span>}
         {release.se_lead    && <span>SE: <span className="font-medium text-slate-700">{release.se_lead}</span></span>}
         {release.csm        && <span>CSM: <span className="font-medium text-slate-700">{release.csm}</span></span>}
-        {release.reporter   && <span>Reporter: <span className="font-medium text-slate-700">{release.reporter}</span></span>}
       </div>
 
       {release.notes && (
-        <p className="text-xs text-slate-600 border-t border-slate-200/60 pt-2 leading-relaxed">
+        <p className="text-[11px] text-slate-600 border-t border-slate-100 pt-3 leading-relaxed">
           {release.notes}
         </p>
       )}
@@ -102,44 +97,56 @@ function ExceptionCard({ release, types, onSelectPartner }) {
 
 export default function ExceptionPanel({ onSelectPartner }) {
   const [filter, setFilter] = useState('all');
-  const { releases } = useData();
+  const { getExceptions } = useData();
 
-  const exceptions = releases.reduce((acc, r) => {
-    const types = [];
-    if (r.blocked)                           types.push('blocked');
-    if (r.redAccount)                        types.push('redAccount');
-    if (r.missingPM)                         types.push('missingPM');
-    if (r.daysInEAP > 90 && !r.blocked)     types.push('overdueEAP');
-    if (types.length > 0) acc.push({ release: r, types });
-    return acc;
-  }, []);
+  const exceptions = useMemo(
+    () =>
+      getExceptions().reduce((acc, r) => {
+        const types = [];
+        if (r.blocked) types.push('blocked');
+        if (r.redAccount) types.push('redAccount');
+        if (r.missingPM) types.push('missingPM');
+        if (r.daysInEAP > 90 && !r.blocked) types.push('overdueEAP');
+        if (types.length > 0) acc.push({ release: r, types });
+        return acc;
+      }, []),
+    [getExceptions]
+  );
 
   const filtered = filter === 'all'
     ? exceptions
     : exceptions.filter(e => e.types.includes(filter));
 
+  // Counts per type
   const counts = exceptions.reduce((acc, e) => {
     e.types.forEach(t => { acc[t] = (acc[t] || 0) + 1; });
     return acc;
   }, {});
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-3 bg-white border-b border-slate-200 flex-shrink-0">
-        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <AlertCircle size={16} className="text-red-500" />
-          Exceptions &amp; Escalations
-          <span className="ml-auto text-xs font-normal text-slate-500">{exceptions.length} total</span>
+    <div className="flex flex-col h-full min-h-0">
+      <div className="px-5 py-4 flex-shrink-0 border-b border-slate-100/80">
+        <h2 className="text-base font-semibold text-slate-900 flex flex-wrap items-center gap-2 tracking-tight">
+          <AlertCircle size={17} className="text-red-500 shrink-0" strokeWidth={1.75} />
+          Exceptions
+          <span className="ml-auto text-xs font-medium text-slate-400 tabular-nums">{exceptions.length} open</span>
         </h2>
-        <p className="text-xs text-slate-500 mt-0.5">Partners requiring immediate attention — sourced from Jira + Monday.com</p>
+        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-2xl">
+          Items that need attention across the portfolio.
+        </p>
       </div>
 
-      <div className="flex gap-1 px-4 py-2 bg-slate-50 border-b border-slate-200 overflow-x-auto flex-shrink-0">
+      <div className="flex gap-1.5 px-4 sm:px-5 py-3 overflow-x-auto flex-shrink-0 scrollbar-thin">
         <button
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+          type="button"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+            filter === 'all'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'bg-white text-slate-600 ring-1 ring-slate-200/80 hover:ring-slate-300'
+          }`}
           onClick={() => setFilter('all')}
         >
-          <Filter size={11} /> All ({exceptions.length})
+          <Filter size={12} strokeWidth={1.75} /> All ({exceptions.length})
         </button>
         {Object.entries(EXCEPTION_TYPES).map(([key, cfg]) => {
           const Icon = cfg.icon;
@@ -148,16 +155,21 @@ export default function ExceptionPanel({ onSelectPartner }) {
           return (
             <button
               key={key}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filter === key ? 'bg-slate-800 text-white' : `bg-white ${cfg.color} border border-slate-200 hover:bg-slate-100`}`}
+              type="button"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                filter === key
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : `bg-white ${cfg.color} ring-1 ring-slate-200/80 hover:ring-slate-300`
+              }`}
               onClick={() => setFilter(key)}
             >
-              <Icon size={11} /> {cfg.label} ({count})
+              <Icon size={12} strokeWidth={1.75} /> {cfg.label} ({count})
             </button>
           );
         })}
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-2.5">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 sm:px-5 py-2 space-y-3">
         {filtered.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <AlertCircle size={32} className="mx-auto mb-2 opacity-30" />
@@ -166,7 +178,7 @@ export default function ExceptionPanel({ onSelectPartner }) {
         ) : (
           filtered.map(({ release, types }) => (
             <ExceptionCard
-              key={`${release.partner}-${release.product}-${release.jira}`}
+              key={`${release.partner}-${release.product}`}
               release={release}
               types={types}
               onSelectPartner={onSelectPartner}
@@ -175,8 +187,8 @@ export default function ExceptionPanel({ onSelectPartner }) {
         )}
       </div>
 
-      <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex-shrink-0">
-        <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+      <div className="px-4 sm:px-5 py-2.5 bg-white/60 backdrop-blur-sm border-t border-slate-100 flex-shrink-0">
+        <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
           {Object.entries(EXCEPTION_TYPES).map(([key, cfg]) => {
             const count = counts[key] || 0;
             if (count === 0) return null;
