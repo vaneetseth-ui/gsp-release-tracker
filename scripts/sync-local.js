@@ -132,8 +132,11 @@ function transform(issue, idx) {
     }
   }
 
+  // Trim notes to 120 chars max — keeps payload small
+  const notes = f.summary ? String(f.summary).slice(0, 120) : null;
+
   return {
-    id: idx + 1,
+    id:          idx + 1,
     jira_key:    issue.key,
     partner,
     product,
@@ -144,7 +147,7 @@ function transform(issue, idx) {
     pm,
     se_lead,
     csm,
-    notes: f.description ? String(f.description).slice(0, 200).replace(/\n/g, ' ') : null,
+    notes,
     blocked,
     red_account,
     missing_pm,
