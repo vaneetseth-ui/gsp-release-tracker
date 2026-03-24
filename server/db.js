@@ -1,7 +1,7 @@
 /**
  * db.js — in-memory store with optional PostgreSQL persistence
  */
-import { RELEASES as SEED_RELEASES, CHANGELOG as SEED_CHANGELOG } from './data.js';
+import { RELEASES as BUILTIN_RELEASES, CHANGELOG as BUILTIN_CHANGELOG } from './data.js';
 import { initDatabase, loadFromPostgres, replaceAllData } from './database.js';
 import { normalizeProductArea } from '../src/data/constants.js';
 
@@ -18,8 +18,8 @@ function flag(v) {
 }
 
 export async function initDataStore() {
-  store.releases = SEED_RELEASES.map((r) => normalizeRelease(r));
-  store.changelog = [...SEED_CHANGELOG];
+  store.releases = BUILTIN_RELEASES.map((r) => normalizeRelease(r));
+  store.changelog = [...BUILTIN_CHANGELOG];
   store.lastSync = null;
   store.dataSource = 'memory';
 
@@ -35,7 +35,7 @@ export async function initDataStore() {
       store.dataSource = 'postgres';
     }
   } catch (e) {
-    console.error('initDataStore: Postgres load failed, using seed data:', e.message);
+    console.error('initDataStore: Postgres load failed, using in-memory fallback:', e.message);
   }
 }
 

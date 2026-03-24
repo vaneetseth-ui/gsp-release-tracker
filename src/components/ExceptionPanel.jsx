@@ -4,9 +4,10 @@
  */
 import React, { useState, useMemo } from 'react';
 import { AlertCircle, DollarSign, UserX, AlertTriangle, Clock, Filter } from 'lucide-react';
-import { STAGES } from '../data/mockData.js';
+import { STAGES } from '../data/stages.js';
 import { useData } from '../context/DataContext.jsx';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
+import JiraMondayLinks from './JiraMondayLinks.jsx';
 
 const EXCEPTION_TYPES = {
   blocked:    { label: 'Blocked',       icon: AlertCircle,  color: 'text-red-600',    accent: 'border-l-red-400', badge: 'bg-red-50 text-red-800 ring-1 ring-red-100/80' },
@@ -17,6 +18,9 @@ const EXCEPTION_TYPES = {
 
 function ExceptionCard({ release, types, onSelectPartner }) {
   const accent = EXCEPTION_TYPES[types[0]]?.accent || 'border-l-slate-200';
+  const jl = release.jiraLinks || [];
+  const hasToolLinks = jl.length > 0 || !!release.mondayUrl;
+  const showRawJira = !jl.length && release.jira;
   return (
     <div
       className={`rounded-2xl bg-white p-4 space-y-3 shadow-sm ring-1 ring-slate-200/50 border-l-[3px] ${accent}`}
@@ -56,8 +60,11 @@ function ExceptionCard({ release, types, onSelectPartner }) {
       </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600">
-        {release.jira && (
-          <span className="font-mono text-blue-600">{release.jira}</span>
+        {(hasToolLinks || showRawJira) && (
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <JiraMondayLinks jiraLinks={jl} mondayUrl={release.mondayUrl} compact />
+            {showRawJira && <span className="font-mono text-slate-600">{release.jira}</span>}
+          </span>
         )}
         {release.daysOverdue > 0 && (
           <span className="flex items-center gap-1 text-red-600 font-semibold">
@@ -97,7 +104,7 @@ function ExceptionCard({ release, types, onSelectPartner }) {
 
 export default function ExceptionPanel({ onSelectPartner }) {
   const [filter, setFilter] = useState('all');
-  const { getExceptions } = useData();
+  const { getExceptions, loading, dataStatus, loadError } = useData();
 
   const exceptions = useMemo(
     () =>
@@ -134,6 +141,13 @@ export default function ExceptionPanel({ onSelectPartner }) {
         <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-2xl">
           Items that need attention across the portfolio.
         </p>
+        {!loading && dataStatus !== 'live' && (
+          <p className="text-xs text-amber-800 bg-amber-50 ring-1 ring-amber-100/80 rounded-lg px-3 py-2 mt-2 max-w-2xl">
+            {dataStatus === 'error'
+              ? `Could not load releases: ${loadError || 'unknown error'}.`
+              : 'No release records loaded — exceptions appear after data is synced.'}
+          </p>
+        )}
       </div>
 
       <div className="flex gap-1.5 px-4 sm:px-5 py-3 overflow-x-auto flex-shrink-0 scrollbar-thin">

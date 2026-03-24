@@ -10,6 +10,7 @@ import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
 import AskPanel        from './components/AskPanel.jsx';
+import TimelineFilter  from './components/TimelineFilter.jsx';
 import { useData }     from './context/DataContext.jsx';
 
 const TABS = [
@@ -130,7 +131,7 @@ function formatSyncTime(isoString) {
 }
 
 export default function App() {
-  const { refresh: refreshReleases, dataMode } = useData();
+  const { refresh: refreshReleases, dataStatus, loadError, loading: releasesLoading } = useData();
   const [activeTab, setActiveTab] = useState('matrix');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
@@ -178,6 +179,8 @@ export default function App() {
         syncStatus={syncStatus}
       />
 
+      <TimelineFilter />
+
       {/* Main content area + optional side panel */}
       <div className="flex flex-1 overflow-hidden">
         {/* Main pane */}
@@ -223,10 +226,24 @@ export default function App() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1.5">
             <span
-              className={`w-1.5 h-1.5 rounded-full ${dataMode === 'live' ? 'bg-emerald-400' : 'bg-amber-400'}`}
+              className={`w-1.5 h-1.5 rounded-full ${
+                releasesLoading
+                  ? 'bg-slate-400 animate-pulse'
+                  : dataStatus === 'live'
+                    ? 'bg-emerald-400'
+                    : dataStatus === 'error'
+                      ? 'bg-red-400'
+                      : 'bg-amber-400'
+              }`}
             />
             <span className="font-medium text-slate-600">
-              {dataMode === 'live' ? 'Live data' : 'Demo data'}
+              {releasesLoading
+                ? 'Loading releases…'
+                : dataStatus === 'live'
+                  ? 'Releases loaded'
+                  : dataStatus === 'error'
+                    ? `Load failed${loadError ? `: ${loadError}` : ''}`
+                    : 'No release rows from API'}
             </span>
           </span>
           <span className="text-slate-400 hidden sm:inline">Jira · Monday · Confluence · Sheets · Postgres</span>

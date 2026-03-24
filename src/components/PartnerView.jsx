@@ -4,9 +4,10 @@
  */
 import React from 'react';
 import { X, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
-import { STAGES } from '../data/mockData.js';
+import { STAGES } from '../data/stages.js';
 import { useData } from '../context/DataContext.jsx';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
+import JiraMondayLinks from './JiraMondayLinks.jsx';
 
 function ContactBadge({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -34,6 +35,9 @@ function ReleaseCard({ release }) {
 
   const hasAlert = release.blocked || release.redAccount || release.missingPM ||
     (release.daysInEAP && release.daysInEAP > 90);
+  const jl = release.jiraLinks || [];
+  const hasToolLinks = jl.length > 0 || !!release.mondayUrl;
+  const showRawJira = !jl.length && release.jira;
 
   return (
     <div
@@ -52,8 +56,13 @@ function ReleaseCard({ release }) {
             <span className="font-semibold text-sm text-slate-800">{release.product}</span>
             <ProductAreaBadge area={release.productArea || release.product_area} />
           </div>
-          {release.jira && (
-            <span className="text-xs text-blue-600 font-mono">{release.jira}</span>
+          {(hasToolLinks || showRawJira) && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <JiraMondayLinks jiraLinks={jl} mondayUrl={release.mondayUrl} compact />
+              {showRawJira && (
+                <span className="text-xs text-slate-600 font-mono">{release.jira}</span>
+              )}
+            </div>
           )}
         </div>
         <StageChip stage={release.stage} />

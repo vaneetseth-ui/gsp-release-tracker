@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { AlertCircle, AlertTriangle, DollarSign, UserX } from 'lucide-react';
-import { STAGES } from '../data/mockData.js';
+import { STAGES } from '../data/stages.js';
 import { useData } from '../context/DataContext.jsx';
 
 const AREA_HEADER_TINT = [
@@ -101,8 +101,16 @@ function SummaryBar({ summary }) {
 
 export default function MatrixView({ onSelectPartner, onSelectRelease }) {
   const [hoveredPartner, setHoveredPartner] = useState(null);
-  const { partners, productAreaGroups, matrixProductOrder, getRelease, getSummary, loading } =
-    useData();
+  const {
+    partners,
+    productAreaGroups,
+    matrixProductOrder,
+    getRelease,
+    getSummary,
+    loading,
+    dataStatus,
+    loadError,
+  } = useData();
   const summary = getSummary();
   const totalCols = matrixProductOrder.length;
 
@@ -141,6 +149,17 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-4 sm:px-5 pb-4">
+        {!loading && partners.length === 0 && (
+          <div className="rounded-2xl bg-white/90 ring-1 ring-slate-200/60 shadow-soft px-6 py-14 text-center">
+            <p className="text-sm font-medium text-slate-700">No release data to show</p>
+            <p className="text-xs text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
+              {dataStatus === 'error'
+                ? loadError || 'Could not load /api/releases.'
+                : 'The API returned no rows. Sync or ingest releases, then refresh.'}
+            </p>
+          </div>
+        )}
+        {(loading || partners.length > 0) && (
         <div className="rounded-2xl bg-white/90 ring-1 ring-slate-200/60 shadow-soft overflow-hidden">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -261,6 +280,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       <div className="px-4 sm:px-5 py-2.5 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/50">

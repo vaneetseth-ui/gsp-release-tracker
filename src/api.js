@@ -1,8 +1,7 @@
 /**
  * api.js — API client for GSP Release Tracker
- * In dev: proxied to http://localhost:3001 via Vite proxy
+ * In dev: proxied to the API server via Vite proxy
  * In prod: same-origin (Express serves /api/* and static files)
- * Falls back gracefully to mock data if the API is unavailable
  */
 
 const BASE = '/api';
@@ -38,9 +37,7 @@ function toQS(params) {
   return qs ? `?${qs}` : '';
 }
 
-/**
- * isApiAvailable — quick health-check used to decide live vs mock mode
- */
+/** Quick health-check for the API (optional tooling). */
 export async function isApiAvailable() {
   try {
     await fetch('/api/health', { signal: AbortSignal.timeout(1500) });

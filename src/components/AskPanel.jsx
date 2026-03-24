@@ -5,6 +5,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw } from 'lucide-react';
 import { api } from '../api.js';
+import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
+import JiraMondayLinks from './JiraMondayLinks.jsx';
 
 const SUGGESTIONS = [
   "What is MCM's Nova IVA status?",
@@ -36,6 +38,9 @@ function Tier1Result({ result }) {
   if (result.intent === 'direct_lookup') {
     const r = result.record;
     if (!r) return <p className="text-slate-500 text-sm">No record found for that partner/product combination.</p>;
+    const jiraLinks = buildJiraLinks(jiraTextForLinkParsing(r));
+    const mondayUrl = resolveMondayUrl(r);
+    const showRawJira = !jiraLinks.length && (r.jira_number || r.jira);
     return (
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100">
@@ -52,7 +57,17 @@ function Tier1Result({ result }) {
           {r.actual_date  && <div><p className="text-xs text-slate-400 mb-0.5">Actual Date</p><p className="font-medium">{r.actual_date}</p></div>}
           {r.pm           && <div><p className="text-xs text-slate-400 mb-0.5">PM</p><p className="font-medium">{r.pm}</p></div>}
           {r.se_lead      && <div><p className="text-xs text-slate-400 mb-0.5">SE Lead</p><p className="font-medium">{r.se_lead}</p></div>}
-          {r.jira_number  && <div><p className="text-xs text-slate-400 mb-0.5">Jira</p><p className="font-medium font-mono text-blue-700">{r.jira_number}</p></div>}
+          {(jiraLinks.length > 0 || mondayUrl || showRawJira) && (
+            <div className="col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Jira / Monday</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <JiraMondayLinks jiraLinks={jiraLinks} mondayUrl={mondayUrl} />
+                {showRawJira && (
+                  <span className="font-medium font-mono text-slate-600 text-sm">{r.jira_number || r.jira}</span>
+                )}
+              </div>
+            </div>
+          )}
           {r.days_in_eap  && <div><p className="text-xs text-slate-400 mb-0.5">Days in EAP</p><p className={`font-medium ${r.days_in_eap > 90 ? 'text-red-600 font-bold' : ''}`}>{r.days_in_eap}d</p></div>}
         </div>
         {r.notes && <div className="px-4 pb-4 text-xs text-slate-500 italic border-t border-slate-100 pt-3">{r.notes}</div>}
@@ -119,20 +134,31 @@ function Tier3Result({ result }) {
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{rows.length} {label}</p>
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100 max-h-80 overflow-y-auto">
-        {rows.map((r, i) => (
-          <div key={i} className="px-4 py-3 hover:bg-slate-50">
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-medium text-slate-800 text-sm">{r.partner} · {r.product}</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>{r.stage}</span>
+        {rows.map((r, i) => {
+          const jl = buildJiraLinks(jiraTextForLinkParsing(r));
+          const mUrl = resolveMondayUrl(r);
+          const rawJira = !jl.length && (r.jira_number || r.jira);
+          return (
+            <div key={i} className="px-4 py-3 hover:bg-slate-50">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-slate-800 text-sm">{r.partner} · {r.product}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>{r.stage}</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {r.blocked     && <span className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded">Blocked {r.days_overdue}d</span>}
+                {r.red_account && <span className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded">Red Acct ${((r.arr_at_risk||0)/1000).toFixed(0)}K ARR</span>}
+                {r.missing_pm  && <span className="text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded">No PM</span>}
+                {r.days_in_eap > 90 && <span className="text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded">{r.days_in_eap}d in EAP</span>}
+              </div>
+              {(jl.length > 0 || mUrl || rawJira) && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <JiraMondayLinks jiraLinks={jl} mondayUrl={mUrl} compact />
+                  {rawJira && <span className="text-xs font-mono text-slate-600">{r.jira_number || r.jira}</span>}
+                </div>
+              )}
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {r.blocked     && <span className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded">Blocked {r.days_overdue}d</span>}
-              {r.red_account && <span className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded">Red Acct ${((r.arr_at_risk||0)/1000).toFixed(0)}K ARR</span>}
-              {r.missing_pm  && <span className="text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded">No PM</span>}
-              {r.days_in_eap > 90 && <span className="text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded">{r.days_in_eap}d in EAP</span>}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

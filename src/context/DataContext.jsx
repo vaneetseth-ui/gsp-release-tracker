@@ -6,12 +6,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { RELEASES as SEED_RELEASES, STAGES } from '../data/mockData.js';
+import { STAGES } from '../data/stages.js';
 import {
   MATRIX_PRODUCT_ORDER,
   PRODUCT_AREA_GROUPS,
   normalizeProductArea,
 } from '../data/constants.js';
+import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
 
 const DataContext = createContext(null);
 
@@ -31,13 +32,20 @@ export function normalizeReleaseRow(r) {
   const daysInEAP = r.days_in_eap ?? r.daysInEAP ?? null;
   const daysOverdue = r.days_overdue ?? r.daysOverdue ?? null;
   const arrAtRisk = r.arr_at_risk != null ? Number(r.arr_at_risk) : r.arrAtRisk ?? null;
+  const jiraRaw = r.jira_number ?? r.jira_key ?? r.jira ?? null;
+  const jiraLinks = buildJiraLinks(jiraTextForLinkParsing(r));
+  const mondayUrl = resolveMondayUrl(r);
+  const jira_number = r.jira_number ?? r.jira_key ?? jiraLinks[0]?.key ?? null;
 
   return {
     ...r,
     product,
     product_area,
     productArea: product_area,
-    jira: r.jira ?? r.jira_number ?? null,
+    jira: jiraRaw,
+    jira_number,
+    jiraLinks,
+    mondayUrl,
     blocked,
     redAccount,
     missingPM,
@@ -45,6 +53,12 @@ export function normalizeReleaseRow(r) {
     daysOverdue,
     arrAtRisk,
   };
+}
+
+function getReleaseDateForFilter(r) {
+  const raw = r.last_updated || r.target_date || r.actual_date || null;
+  if (!raw) return null;
+  return String(raw).slice(0, 10);
 }
 
 function partnersFromReleases(releases) {
@@ -71,28 +85,36 @@ function computeSummary(releases) {
 }
 
 export function DataProvider({ children }) {
-  const [releases, setReleases] = useState(() =>
-    SEED_RELEASES.map((r) => normalizeReleaseRow(r))
-  );
+  const [allReleases, setAllReleases] = useState([]);
+  const [dateRange, setDateRangeState] = useState({ from: null, to: null });
   const [loading, setLoading] = useState(true);
-  const [dataMode, setDataMode] = useState('mock');
+  /** 'live' = API returned rows; 'empty' = OK but no rows; 'error' = fetch/parse failed */
+  const [dataStatus, setDataStatus] = useState('empty');
+  const [loadError, setLoadError] = useState(null);
+
+  const setDateRange = useCallback((update) => {
+    setDateRangeState((prev) => (typeof update === 'function' ? update(prev) : { ...prev, ...update }));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch('/api/releases');
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setReleases(data.map(normalizeReleaseRow));
-        setDataMode('live');
+      if (!Array.isArray(data)) throw new Error('Invalid releases response');
+      if (data.length > 0) {
+        setAllReleases(data.map(normalizeReleaseRow));
+        setDataStatus('live');
       } else {
-        setReleases(SEED_RELEASES.map((r) => normalizeReleaseRow(r)));
-        setDataMode('mock');
+        setAllReleases([]);
+        setDataStatus('empty');
       }
-    } catch {
-      setReleases(SEED_RELEASES.map((r) => normalizeReleaseRow(r)));
-      setDataMode('mock');
+    } catch (e) {
+      setAllReleases([]);
+      setLoadError(e?.message || 'Failed to load releases');
+      setDataStatus('error');
     } finally {
       setLoading(false);
     }
@@ -101,6 +123,20 @@ export function DataProvider({ children }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  const releases = useMemo(() => {
+    const { from, to } = dateRange;
+    if (!from && !to) return allReleases;
+    return allReleases.filter((r) => {
+      const d = getReleaseDateForFilter(r);
+      if (!d) return false;
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  }, [allReleases, dateRange]);
+
+  const isFiltered = !!(dateRange.from || dateRange.to);
 
   const partners = useMemo(() => partnersFromReleases(releases), [releases]);
 
@@ -132,11 +168,16 @@ export function DataProvider({ children }) {
   const value = useMemo(
     () => ({
       releases,
+      allReleases,
+      dateRange,
+      setDateRange,
+      isFiltered,
       partners,
       productAreaGroups: PRODUCT_AREA_GROUPS,
       matrixProductOrder: MATRIX_PRODUCT_ORDER,
       loading,
-      dataMode,
+      dataStatus,
+      loadError,
       refresh: load,
       getRelease,
       getPartnerReleases,
@@ -145,9 +186,14 @@ export function DataProvider({ children }) {
     }),
     [
       releases,
+      allReleases,
+      dateRange,
+      setDateRange,
+      isFiltered,
       partners,
       loading,
-      dataMode,
+      dataStatus,
+      loadError,
       load,
       getRelease,
       getPartnerReleases,

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS releases (
   days_in_eap      INTEGER,
   arr_at_risk      INTEGER,
   -- Provenance
-  source           TEXT    DEFAULT 'mock',
+  source           TEXT    DEFAULT 'ingest',
   confidence       TEXT    DEFAULT 'high',
   last_updated     TEXT    DEFAULT (datetime('now')),
   UNIQUE(partner, product)
