@@ -16,7 +16,8 @@
     "heroku-postbuild": "vite build",
     "preview":          "vite preview",
     "seed":             "node server/seed.js",
-    "start":            "node server/index.js"
+    "start":            "node server/index.js",
+    "sync":             "node scripts/sync-local.js"
   },
   "dependencies": {
     "cors":           "^2.8.5",

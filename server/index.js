@@ -96,6 +96,33 @@ app.get('/api/sync/fields', async (_req, res) => {
   }
 });
 
+// ── Ingest endpoint — called by local sync script (runs inside corporate network) ──
+// POST /api/ingest  { releases: [...], meta: { totalIssues, fetchedAt, ... } }
+// Optional bearer token auth: set INGEST_TOKEN env var on Heroku to protect the endpoint
+app.post('/api/ingest', (req, res) => {
+  const token = process.env.INGEST_TOKEN;
+  if (token) {
+    const auth = req.headers['authorization'] || '';
+    if (auth !== `Bearer ${token}`) {
+      return res.status(401).json({ error: 'Unauthorized — invalid INGEST_TOKEN' });
+    }
+  }
+
+  const { releases, meta = {} } = req.body;
+  if (!Array.isArray(releases) || releases.length === 0) {
+    return res.status(400).json({ error: 'Body must contain a non-empty releases array' });
+  }
+
+  db.setLiveData(releases, { ...meta, source: 'local-sync' });
+  console.log(`[ingest] Received ${releases.length} releases from local sync script`);
+  res.json({
+    success:    true,
+    releases:   releases.length,
+    mode:       'live',
+    fetchedAt:  meta.fetchedAt || new Date().toISOString(),
+  });
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 app.get('/api/summary', (_req, res) => {
   res.json(db.getSummary());
