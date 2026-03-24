@@ -55,6 +55,11 @@ function ReleaseCard({ release }) {
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-semibold text-sm text-slate-800">{release.product}</span>
             <ProductAreaBadge area={release.productArea || release.product_area} />
+            {release.source === 'confluence' && (
+              <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-800 ring-1 ring-indigo-100/90">
+                Confluence
+              </span>
+            )}
           </div>
           {(hasToolLinks || showRawJira) && (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">

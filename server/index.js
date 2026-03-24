@@ -10,12 +10,16 @@
  *   GET  /api/changelog         — recent changes (?limit=N &partner=X)
  *   POST /api/query             — natural language query → tier-routed result
  *   POST /api/ingest            — push releases from local Jira sync (optional Bearer INGEST_TOKEN)
+ *   POST /api/sync/confluence   — fetch configured wiki pages, parse tables, merge (Bearer INGEST_TOKEN if set)
+ *   POST /api/sync/all          — Jira full ingest (if JIRA_PAT) then Confluence merge (if base URL set); optional Bearer INGEST_TOKEN
  */
 import express   from 'express';
 import cors      from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as db from './db.js';
+import { runConfluenceIngestBuild, CONFLUENCE_PAGES } from './confluence/ingest.js';
+import { syncFromJira } from './sync_jira.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const PORT       = process.env.PORT || 3001;
@@ -47,20 +51,119 @@ app.get('/api/health', (_req, res) => {
   }
 });
 
-app.post('/api/ingest', async (req, res) => {
+function requireIngestAuth(req, res) {
   const token = process.env.INGEST_TOKEN;
-  if (token) {
-    const auth = req.headers.authorization;
-    if (auth !== `Bearer ${token}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  if (!token) return true;
+  const auth = req.headers.authorization;
+  if (auth !== `Bearer ${token}`) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
   }
+  return true;
+}
+
+app.post('/api/ingest', async (req, res) => {
+  if (!requireIngestAuth(req, res)) return;
   try {
     const result = await db.applyIngest(req.body || {});
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
+});
+
+/** Pull configured Confluence wiki pages, parse tables, merge into releases (source: confluence). */
+app.post('/api/sync/confluence', async (req, res) => {
+  if (!requireIngestAuth(req, res)) return;
+  try {
+    const { rows, pageErrors } = await runConfluenceIngestBuild();
+    const result = await db.mergeConfluenceReleases(rows);
+    res.json({
+      ok: true,
+      pages: CONFLUENCE_PAGES.length,
+      parsedRows: rows.length,
+      pageErrors,
+      ...result,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/** Jira replace-all ingest + Confluence merge. Monday.com has no API ingest here; use JIRA_FIELD_MONDAY_* for links. */
+app.post('/api/sync/all', async (req, res) => {
+  if (!requireIngestAuth(req, res)) return;
+
+  /** @type {object[]} */
+  const steps = [];
+
+  if (process.env.JIRA_PAT?.trim()) {
+    try {
+      const bundle = await syncFromJira();
+      await db.applyIngest({
+        releases: bundle.releases,
+        changelog: undefined,
+        meta: { fetchedAt: bundle.fetchedAt },
+      });
+      steps.push({
+        jira: { ok: true, count: bundle.releases.length, fetchedAt: bundle.fetchedAt },
+      });
+    } catch (e) {
+      steps.push({ jira: { ok: false, error: e?.message || String(e) } });
+    }
+  } else {
+    steps.push({
+      jira: { skipped: true, reason: 'JIRA_PAT not set' },
+    });
+  }
+
+  const confBase =
+    process.env.CONFLUENCE_BASE_URL ||
+    process.env.ATLASSIAN_SITE_URL ||
+    process.env.CONFLUENCE_URL ||
+    '';
+
+  if (confBase.trim()) {
+    try {
+      const { rows, pageErrors } = await runConfluenceIngestBuild();
+      const result = await db.mergeConfluenceReleases(rows);
+      steps.push({
+        confluence: {
+          ok: true,
+          pages: CONFLUENCE_PAGES.length,
+          parsedRows: rows.length,
+          pageErrors,
+          ...result,
+        },
+      });
+    } catch (e) {
+      steps.push({ confluence: { ok: false, error: e?.message || String(e) } });
+    }
+  } else {
+    steps.push({
+      confluence: {
+        skipped: true,
+        reason: 'Set CONFLUENCE_BASE_URL, ATLASSIAN_SITE_URL, or CONFLUENCE_URL',
+      },
+    });
+  }
+
+  steps.push({
+    monday: {
+      note: 'No Monday API sync. Populate monday_url / monday_item_id via JIRA_FIELD_MONDAY_URL and JIRA_FIELD_MONDAY_ITEM_ID, or POST /api/ingest.',
+    },
+  });
+
+  const anyFailed = steps.some((s) => {
+    const v = Object.values(s)[0];
+    return v && typeof v === 'object' && v.ok === false;
+  });
+
+  res.json({
+    ok: !anyFailed,
+    steps,
+    lastSync: db.getLastSync(),
+  });
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────

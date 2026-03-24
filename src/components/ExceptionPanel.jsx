@@ -37,6 +37,11 @@ function ExceptionCard({ release, types, onSelectPartner }) {
           <div className="text-[11px] text-slate-500 mt-1.5 flex flex-wrap items-center gap-1.5 leading-relaxed">
             <span className="font-medium text-slate-700">{release.product}</span>
             <ProductAreaBadge area={release.productArea || release.product_area} />
+            {release.source === 'confluence' && (
+              <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-800 ring-1 ring-indigo-100/90">
+                Confluence
+              </span>
+            )}
             <span className="text-slate-300">·</span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${STAGES[release.stage]?.badge}`}>
               {release.stage}

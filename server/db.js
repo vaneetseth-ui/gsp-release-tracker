@@ -94,7 +94,115 @@ function normalizeRelease(r) {
     days_overdue: r.days_overdue ?? null,
     days_in_eap: r.days_in_eap ?? null,
     arr_at_risk: r.arr_at_risk != null ? Number(r.arr_at_risk) : null,
+    source: r.source != null && r.source !== '' ? String(r.source) : null,
+    monday_url:
+      r.monday_url != null && String(r.monday_url).trim() !== ''
+        ? String(r.monday_url).trim()
+        : null,
+    monday_item_id:
+      r.monday_item_id != null && String(r.monday_item_id).trim() !== ''
+        ? String(r.monday_item_id).trim()
+        : null,
   };
+}
+
+function releaseMergeKey(r) {
+  const p = String(r.partner || '')
+    .trim()
+    .toLowerCase();
+  const prod = String(r.product || '')
+    .trim()
+    .toLowerCase();
+  return `${p}|||${prod}`;
+}
+
+/**
+ * Upsert wiki-parsed rows. New keys get source confluence. Existing Jira rows keep source jira and merge notes/empty fields.
+ */
+export async function mergeConfluenceReleases(confluenceRows) {
+  if (!confluenceRows?.length) {
+    return { added: 0, updated: 0, skipped: 0, total: R().length };
+  }
+
+  const map = new Map();
+  for (const r of R()) {
+    map.set(releaseMergeKey(r), { ...r });
+  }
+
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const raw of confluenceRows) {
+    const c = normalizeRelease({ ...raw, source: 'confluence' });
+    if (!c.partner?.trim() || !c.product?.trim()) {
+      skipped++;
+      continue;
+    }
+    if (c.product === 'Unknown' || c.partner === 'Unknown') {
+      skipped++;
+      continue;
+    }
+
+    const k = releaseMergeKey(c);
+    const existing = map.get(k);
+
+    if (!existing) {
+      map.set(k, c);
+      added++;
+      continue;
+    }
+
+    const src = (existing.source || '').toLowerCase();
+    if (src === 'jira' || existing.jira_number) {
+      const merged = { ...existing };
+      merged.notes = [existing.notes, c.notes].filter(Boolean).join('\n\n');
+      for (const f of [
+        'target_date',
+        'actual_date',
+        'stage',
+        'pm',
+        'se_lead',
+        'csm',
+        'product_area',
+        'monday_url',
+        'monday_item_id',
+      ]) {
+        if ((merged[f] == null || merged[f] === '') && c[f] != null && c[f] !== '') merged[f] = c[f];
+      }
+      map.set(k, normalizeRelease(merged));
+      updated++;
+    } else {
+      map.set(
+        k,
+        normalizeRelease({
+          ...existing,
+          ...c,
+          source: 'confluence',
+          id: existing.id,
+        })
+      );
+      updated++;
+    }
+  }
+
+  store.releases = [...map.values()];
+  const lastSync = new Date().toISOString();
+  store.lastSync = lastSync;
+  store.dataSource = process.env.DATABASE_URL ? 'postgres' : 'memory';
+
+  try {
+    await replaceAllData({
+      releases: store.releases,
+      changelog: null,
+      lastSync,
+    });
+  } catch (e) {
+    console.error('mergeConfluenceReleases: persist failed:', e.message);
+    throw e;
+  }
+
+  return { added, updated, skipped, total: store.releases.length };
 }
 
 function normalizeChangelog(c) {

@@ -25,6 +25,8 @@
  *   JIRA_FIELD_CSM     customfield_XXXXX  (optional, CSM field)
  *   JIRA_FIELD_ARR     customfield_XXXXX  (optional, ARR at risk field)
  *   JIRA_FIELD_STAGE   customfield_XXXXX  (optional, if stage is a custom field)
+ *   JIRA_FIELD_MONDAY_URL     customfield_XXXXX  (optional, Monday board/item URL)
+ *   JIRA_FIELD_MONDAY_ITEM_ID customfield_XXXXX  (optional, Monday pulse/item id)
  */
 
 const JIRA_URL = process.env.JIRA_URL || 'https://jira.ringcentral.com';
@@ -33,12 +35,14 @@ const JIRA_PAT = process.env.JIRA_PAT || '';
 // Custom field IDs — set these via Heroku config vars once you know them
 // Run GET /api/sync/fields to discover the available custom fields
 const FIELD_MAP = {
-  partner:  process.env.JIRA_FIELD_PARTNER || null,
-  product:  process.env.JIRA_FIELD_PRODUCT || null,
-  se_lead:  process.env.JIRA_FIELD_SE      || null,
-  csm:      process.env.JIRA_FIELD_CSM     || null,
-  arr:      process.env.JIRA_FIELD_ARR     || null,
-  stage:    process.env.JIRA_FIELD_STAGE   || null,
+  partner:        process.env.JIRA_FIELD_PARTNER || null,
+  product:        process.env.JIRA_FIELD_PRODUCT || null,
+  se_lead:        process.env.JIRA_FIELD_SE      || null,
+  csm:            process.env.JIRA_FIELD_CSM     || null,
+  arr:            process.env.JIRA_FIELD_ARR     || null,
+  stage:          process.env.JIRA_FIELD_STAGE   || null,
+  monday_url:     process.env.JIRA_FIELD_MONDAY_URL || null,
+  monday_item_id: process.env.JIRA_FIELD_MONDAY_ITEM_ID || null,
 };
 
 // Known GSP products — used to parse product from issue summary or labels
@@ -149,10 +153,15 @@ function transformIssue(issue, index) {
     : f.status?.name;
   const stage = normalizeStage(stageRaw);
 
-  // People
-  const pm      = getCustomField(issue, FIELD_MAP.se_lead) || f.assignee?.displayName || null;
+  // People — PM is Jira assignee; SE lead is the configured custom field (not the same as PM)
+  const pm      = f.assignee?.displayName || null;
   const se_lead = getCustomField(issue, FIELD_MAP.se_lead) || null;
   const csm     = getCustomField(issue, FIELD_MAP.csm)     || null;
+
+  const monday_url =
+    getCustomField(issue, FIELD_MAP.monday_url) || null;
+  const monday_item_id =
+    getCustomField(issue, FIELD_MAP.monday_item_id) || null;
 
   // Dates
   const target_date = f.duedate      || null;
@@ -200,6 +209,9 @@ function transformIssue(issue, index) {
     days_overdue,
     days_in_eap,
     arr_at_risk:  arr_at_risk ? Number(arr_at_risk) : null,
+    monday_url: monday_url ? String(monday_url).trim() || null : null,
+    monday_item_id: monday_item_id ? String(monday_item_id).trim() || null : null,
+    source: 'jira',
     // raw for debugging
     _status_raw:  f.status?.name,
     _summary_raw: summary,

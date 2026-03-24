@@ -46,6 +46,7 @@ export function normalizeReleaseRow(r) {
     jira_number,
     jiraLinks,
     mondayUrl,
+    source: r.source ?? null,
     blocked,
     redAccount,
     missingPM,

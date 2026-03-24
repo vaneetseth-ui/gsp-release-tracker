@@ -66,6 +66,15 @@ async function ensureSchema() {
   await pool.query(
     'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_area TEXT'
   );
+  await pool.query(
+    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS source TEXT'
+  );
+  await pool.query(
+    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_url TEXT'
+  );
+  await pool.query(
+    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_item_id TEXT'
+  );
 }
 
 function rowToRelease(row) {
@@ -88,6 +97,9 @@ function rowToRelease(row) {
     days_overdue: row.days_overdue,
     days_in_eap: row.days_in_eap,
     arr_at_risk: row.arr_at_risk != null ? Number(row.arr_at_risk) : null,
+    source: row.source ?? null,
+    monday_url: row.monday_url ?? null,
+    monday_item_id: row.monday_item_id ?? null,
   };
 }
 
@@ -110,7 +122,7 @@ export async function loadFromPostgres() {
   }
   const [relRes, chRes, metaRes] = await Promise.all([
     pool.query(
-      'SELECT id, partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes, blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk FROM releases ORDER BY partner, product'
+      'SELECT id, partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes, blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk, source, monday_url, monday_item_id FROM releases ORDER BY partner, product'
     ),
     pool.query(
       'SELECT id, change_date, partner, product, from_stage, to_stage, author, note FROM changelog ORDER BY change_date DESC'
@@ -134,8 +146,8 @@ export async function replaceAllData({ releases, changelog, lastSync }) {
     const insertRel = `
       INSERT INTO releases (
         partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes,
-        blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk, source, monday_url, monday_item_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
     `;
     for (const r of releases) {
       await client.query(insertRel, [
@@ -156,6 +168,9 @@ export async function replaceAllData({ releases, changelog, lastSync }) {
         r.days_overdue ?? null,
         r.days_in_eap ?? null,
         r.arr_at_risk ?? null,
+        r.source ?? null,
+        r.monday_url ?? null,
+        r.monday_item_id ?? null,
       ]);
     }
 

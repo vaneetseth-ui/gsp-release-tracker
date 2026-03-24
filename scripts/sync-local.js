@@ -14,6 +14,7 @@
  * Optional — map Jira custom fields (IDs from Issue → Configure fields, or REST metadata):
  *   JIRA_FIELD_PARTNER  JIRA_FIELD_PRODUCT  JIRA_FIELD_SE  JIRA_FIELD_CSM
  *   JIRA_FIELD_ARR      JIRA_FIELD_STAGE
+ *   JIRA_FIELD_MONDAY_URL  JIRA_FIELD_MONDAY_ITEM_ID  (optional Monday links from Jira)
  * Example: export JIRA_FIELD_PARTNER=customfield_12345
  *
  * Config — edit these or set as environment variables:
@@ -121,12 +122,14 @@ function transform(issue, idx) {
 
   // Use custom field overrides if set via env vars
   const FIELDS = {
-    partner: process.env.JIRA_FIELD_PARTNER || null,
-    product: process.env.JIRA_FIELD_PRODUCT || null,
-    se_lead: process.env.JIRA_FIELD_SE      || null,
-    csm:     process.env.JIRA_FIELD_CSM     || null,
-    arr:     process.env.JIRA_FIELD_ARR     || null,
-    stage:   process.env.JIRA_FIELD_STAGE   || null,
+    partner:        process.env.JIRA_FIELD_PARTNER || null,
+    product:        process.env.JIRA_FIELD_PRODUCT || null,
+    se_lead:        process.env.JIRA_FIELD_SE      || null,
+    csm:            process.env.JIRA_FIELD_CSM     || null,
+    arr:            process.env.JIRA_FIELD_ARR     || null,
+    stage:          process.env.JIRA_FIELD_STAGE   || null,
+    monday_url:     process.env.JIRA_FIELD_MONDAY_URL || null,
+    monday_item_id: process.env.JIRA_FIELD_MONDAY_ITEM_ID || null,
   };
 
   const partner = cf(issue, FIELDS.partner) || parsePartner(summary);
@@ -179,6 +182,9 @@ function transform(issue, idx) {
     days_overdue,
     days_in_eap,
     arr_at_risk: arr_at_risk ? Number(arr_at_risk) : null,
+    monday_url: cf(issue, FIELDS.monday_url) || null,
+    monday_item_id: cf(issue, FIELDS.monday_item_id) || null,
+    source: 'jira',
   };
 }
 

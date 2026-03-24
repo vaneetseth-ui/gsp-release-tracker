@@ -12,6 +12,8 @@ export function collectFieldIdsFromEnv() {
     'JIRA_FIELD_CSM',
     'JIRA_FIELD_ARR',
     'JIRA_FIELD_STAGE',
+    'JIRA_FIELD_MONDAY_URL',
+    'JIRA_FIELD_MONDAY_ITEM_ID',
   ];
   const ids = keys
     .map(k => process.env[k])

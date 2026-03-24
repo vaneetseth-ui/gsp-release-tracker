@@ -161,6 +161,14 @@ export default function App() {
   const handleRefresh = useCallback(async () => {
     setSyncStatus((s) => ({ ...s, checking: true }));
     try {
+      try {
+        const syncRes = await fetch('/api/sync/all', { method: 'POST' });
+        if (!syncRes.ok && syncRes.status !== 401) {
+          console.warn('sync/all:', syncRes.status, await syncRes.text());
+        }
+      } catch (e) {
+        console.warn('sync/all failed:', e?.message || e);
+      }
       await refreshReleases();
       await fetchHealth();
     } finally {
