@@ -397,7 +397,7 @@ async function fetchMonday() {
       brand:              col(item, 'Brand') || null,
       assignee:           pm,
       source:           'monday',
-      source_url:       `https://monday.com/boards/${item.board_id}/pulses/${item.id}`,
+      source_url:       `https://ringcentral.monday.com/boards/${item.board_id}/pulses/${item.id}`,
       last_updated:     new Date().toISOString(),
       record_id:        crypto.randomUUID(),
       gsp_partner:      partner,
