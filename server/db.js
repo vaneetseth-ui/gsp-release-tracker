@@ -17,6 +17,14 @@ function flag(v) {
   return v === 1 || v === true || v === '1';
 }
 
+function str(v) {
+  return v == null ? '' : String(v);
+}
+
+function cmpStr(a, b) {
+  return str(a).localeCompare(str(b));
+}
+
 export async function initDataStore() {
   store.releases = BUILTIN_RELEASES.map((r) => normalizeRelease(r));
   store.changelog = [...BUILTIN_CHANGELOG];
@@ -117,21 +125,27 @@ function releaseMergeKey(r) {
 }
 
 /**
- * Upsert wiki-parsed rows. New keys get source confluence. Existing Jira rows keep source jira and merge notes/empty fields.
+ * Pure merge: Confluence rows into an existing release list (same rules as mergeConfluenceReleases).
+ * Used by scripts that pull wiki data locally then POST /api/ingest.
  */
-export async function mergeConfluenceReleases(confluenceRows) {
-  if (!confluenceRows?.length) {
-    return { added: 0, updated: 0, skipped: 0, total: R().length };
-  }
-
+export function mergeConfluenceIntoExisting(existingReleases, confluenceRows) {
   const map = new Map();
-  for (const r of R()) {
-    map.set(releaseMergeKey(r), { ...r });
+  for (const r of existingReleases) {
+    map.set(releaseMergeKey(r), { ...normalizeRelease(r) });
   }
 
   let added = 0;
   let updated = 0;
   let skipped = 0;
+
+  if (!confluenceRows?.length) {
+    return {
+      releases: [...map.values()].map((r) => normalizeRelease(r)),
+      added: 0,
+      updated: 0,
+      skipped: 0,
+    };
+  }
 
   for (const raw of confluenceRows) {
     const c = normalizeRelease({ ...raw, source: 'confluence' });
@@ -186,7 +200,24 @@ export async function mergeConfluenceReleases(confluenceRows) {
     }
   }
 
-  store.releases = [...map.values()];
+  return {
+    releases: [...map.values()].map((r) => normalizeRelease(r)),
+    added,
+    updated,
+    skipped,
+  };
+}
+
+/**
+ * Upsert wiki-parsed rows. New keys get source confluence. Existing Jira rows keep source jira and merge notes/empty fields.
+ */
+export async function mergeConfluenceReleases(confluenceRows) {
+  if (!confluenceRows?.length) {
+    return { added: 0, updated: 0, skipped: 0, total: R().length };
+  }
+
+  const { releases, added, updated, skipped } = mergeConfluenceIntoExisting(R(), confluenceRows);
+  store.releases = releases;
   const lastSync = new Date().toISOString();
   store.lastSync = lastSync;
   store.dataSource = process.env.DATABASE_URL ? 'postgres' : 'memory';
@@ -223,11 +254,11 @@ function R() {
 }
 
 export function getAllReleases() {
-  return [...R()].sort((a, b) => a.partner.localeCompare(b.partner) || a.product.localeCompare(b.product));
+  return [...R()].sort((a, b) => cmpStr(a.partner, b.partner) || cmpStr(a.product, b.product));
 }
 
 export function getReleasesByPartner(partner) {
-  return R().filter(r => r.partner === partner).sort((a, b) => a.product.localeCompare(b.product));
+  return R().filter(r => r.partner === partner).sort((a, b) => cmpStr(a.product, b.product));
 }
 
 export function getRelease(partner, product) {
@@ -235,11 +266,15 @@ export function getRelease(partner, product) {
 }
 
 export function getReleasesByStage(stage) {
-  return R().filter(r => r.stage === stage && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
+  return R()
+    .filter(r => r.stage === stage && r.stage !== 'N/A')
+    .sort((a, b) => cmpStr(a.partner, b.partner));
 }
 
 export function getReleasesByProduct(product) {
-  return R().filter(r => r.product === product && r.stage !== 'N/A').sort((a, b) => a.partner.localeCompare(b.partner));
+  return R()
+    .filter(r => r.product === product && r.stage !== 'N/A')
+    .sort((a, b) => cmpStr(a.partner, b.partner));
 }
 
 export function getExceptions() {
@@ -248,7 +283,7 @@ export function getExceptions() {
     .sort((a, b) => {
       const rank = x =>
         flag(x.blocked) ? 0 : flag(x.red_account) ? 1 : x.days_in_eap > 90 ? 2 : 3;
-      return rank(a) - rank(b) || a.partner.localeCompare(b.partner);
+      return rank(a) - rank(b) || cmpStr(a.partner, b.partner);
     });
 }
 
@@ -267,7 +302,7 @@ export function getRedAccounts() {
 export function getMissingPM() {
   return R()
     .filter(r => flag(r.missing_pm))
-    .sort((a, b) => a.partner.localeCompare(b.partner));
+    .sort((a, b) => cmpStr(a.partner, b.partner));
 }
 
 export function getOverdueEAP() {
@@ -278,14 +313,14 @@ export function getOverdueEAP() {
 
 export function getChangelog(limit = 50) {
   return [...store.changelog]
-    .sort((a, b) => b.change_date.localeCompare(a.change_date))
+    .sort((a, b) => cmpStr(b.change_date, a.change_date))
     .slice(0, limit);
 }
 
 export function getChangelogByPartner(partner) {
   return store.changelog
     .filter(c => c.partner === partner)
-    .sort((a, b) => b.change_date.localeCompare(a.change_date));
+    .sort((a, b) => cmpStr(b.change_date, a.change_date));
 }
 
 export function getSummary() {
@@ -307,5 +342,7 @@ export function getSummary() {
 }
 
 export function getPartners() {
-  return [...new Set(R().map(r => r.partner))].sort();
+  return [...new Set(R().map(r => r.partner).filter((p) => p != null && str(p) !== ''))].sort((a, b) =>
+    cmpStr(a, b)
+  );
 }

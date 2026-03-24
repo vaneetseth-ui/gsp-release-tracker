@@ -20,6 +20,7 @@
     "sync": "node scripts/sync-local.js",
     "sync:confluence": "node scripts/sync-confluence.js",
     "sync:confluence:local": "node scripts/confluence-ingest-local.mjs",
+    "sync:confluence:merge-push": "node scripts/confluence-local-merge-push.mjs",
     "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js"
   },
   "dependencies": {
