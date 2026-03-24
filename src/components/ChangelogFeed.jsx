@@ -4,7 +4,8 @@
  */
 import React, { useState } from 'react';
 import { Clock, ArrowRight, Search, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { CHANGELOG, STAGES } from '../data/mockData.js';
+import { STAGES } from '../data/constants.js';
+import { useData } from '../data/DataContext.jsx';
 
 const STAGE_ORDER = { GA: 1, Beta: 2, EAP: 3, Dev: 4, Planned: 5, Blocked: 6, 'N/A': 7 };
 
@@ -37,7 +38,6 @@ function ChangeItem({ item, onSelectPartner }) {
 
   return (
     <div className={`rounded-lg border p-3 space-y-1.5 ${isBlock ? 'border-red-200 bg-red-50' : isUpgrade ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
-      {/* Header row */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
           className="font-semibold text-sm text-blue-700 hover:underline"
@@ -58,10 +58,8 @@ function ChangeItem({ item, onSelectPartner }) {
         </span>
       </div>
 
-      {/* Note */}
       <p className="text-xs text-slate-600 leading-relaxed">{item.note}</p>
 
-      {/* Author */}
       <div className="text-xs text-slate-400">
         Updated by <span className="font-medium text-slate-600">{item.author}</span>
       </div>
@@ -71,41 +69,42 @@ function ChangeItem({ item, onSelectPartner }) {
 
 export default function ChangelogFeed({ onSelectPartner }) {
   const [search, setSearch] = useState('');
+  const { changelog } = useData();
 
-  const filtered = CHANGELOG.filter(item => {
+  const filtered = changelog.filter(item => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      item.partner.toLowerCase().includes(q) ||
-      item.product.toLowerCase().includes(q) ||
-      item.author.toLowerCase().includes(q) ||
-      item.note.toLowerCase().includes(q)
+      (item.partner || '').toLowerCase().includes(q) ||
+      (item.product || '').toLowerCase().includes(q) ||
+      (item.author || '').toLowerCase().includes(q) ||
+      (item.note || '').toLowerCase().includes(q)
     );
   });
 
-  const upgrades = CHANGELOG.filter(c => (STAGE_ORDER[c.to] || 9) < (STAGE_ORDER[c.from] || 9) && c.to !== 'Blocked');
-  const downgrades = CHANGELOG.filter(c => c.to === 'Blocked' || (STAGE_ORDER[c.to] || 9) > (STAGE_ORDER[c.from] || 9));
+  const upgrades = changelog.filter(c => (STAGE_ORDER[c.to] || 9) < (STAGE_ORDER[c.from] || 9) && c.to !== 'Blocked');
+  const downgrades = changelog.filter(c => c.to === 'Blocked' || (STAGE_ORDER[c.to] || 9) > (STAGE_ORDER[c.from] || 9));
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="px-4 py-3 bg-white border-b border-slate-200 flex-shrink-0">
         <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
           <Clock size={16} className="text-blue-500" />
           Changelog
-          <span className="ml-auto text-xs font-normal text-slate-500">Last {CHANGELOG.length} changes</span>
+          <span className="ml-auto text-xs font-normal text-slate-500">{changelog.length} changes</span>
         </h2>
-        <div className="flex gap-3 mt-1 text-xs">
-          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-            <TrendingUp size={11} /> {upgrades.length} promotions
-          </span>
-          <span className="flex items-center gap-1 text-red-600 font-semibold">
-            <TrendingDown size={11} /> {downgrades.length} blocks/regressions
-          </span>
-        </div>
+        {changelog.length > 0 && (
+          <div className="flex gap-3 mt-1 text-xs">
+            <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+              <TrendingUp size={11} /> {upgrades.length} promotions
+            </span>
+            <span className="flex items-center gap-1 text-red-600 font-semibold">
+              <TrendingDown size={11} /> {downgrades.length} blocks/regressions
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Search */}
       <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
         <div className="relative">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -119,12 +118,11 @@ export default function ChangelogFeed({ onSelectPartner }) {
         </div>
       </div>
 
-      {/* Feed */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-2.5">
         {filtered.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <Search size={32} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">No changes match "{search}"</p>
+            <p className="text-sm">{changelog.length === 0 ? 'No changelog data yet — changes will appear after the next sync cycle' : `No changes match "${search}"`}</p>
           </div>
         ) : (
           filtered.map((item, idx) => (
@@ -137,9 +135,8 @@ export default function ChangelogFeed({ onSelectPartner }) {
         )}
       </div>
 
-      {/* Footer */}
       <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 text-xs text-slate-400 flex-shrink-0">
-        Showing {filtered.length} of {CHANGELOG.length} changes · Updated from live Jira + Monday.com sync
+        Showing {filtered.length} of {changelog.length} changes · Live Jira + Monday.com sync
       </div>
     </div>
   );

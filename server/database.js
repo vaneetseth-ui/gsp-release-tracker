@@ -29,10 +29,20 @@ export async function initDb() {
   if (!isDbAvailable()) return;
   const client = await getPool().connect();
   try {
+    // Drop the old UNIQUE constraint on jira_key if it exists
+    // (multiple releases can share a jira_key or have null)
+    await client.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'releases_jira_key_key') THEN
+          ALTER TABLE releases DROP CONSTRAINT releases_jira_key_key;
+        END IF;
+      END $$;
+    `).catch(() => {});
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS releases (
         id           SERIAL PRIMARY KEY,
-        jira_key     TEXT UNIQUE,
+        jira_key     TEXT,
         partner      TEXT,
         product      TEXT,
         stage        TEXT,

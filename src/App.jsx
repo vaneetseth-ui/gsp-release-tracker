@@ -10,7 +10,7 @@ import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
 import AskPanel        from './components/AskPanel.jsx';
-import { getSummary }  from './data/mockData.js';
+import { DataProvider, useData } from './data/DataContext.jsx';
 
 const TABS = [
   { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: '17 partners × 5 products' },
@@ -20,7 +20,7 @@ const TABS = [
 ];
 
 function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
-  const summary = getSummary();
+  const { summary } = useData();
 
   return (
     <header className="bg-rc-navy text-white flex-shrink-0 shadow-lg">
@@ -29,15 +29,15 @@ function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
           <div className="w-7 h-7 rounded-md bg-rc-orange flex items-center justify-center text-white text-xs font-black">RC</div>
           <div>
             <h1 className="text-sm font-bold tracking-wide">GSP Release Tracker</h1>
-            <p className="text-xs text-blue-200">PMO BuddAI · 17 Global Strategic Partners</p>
+            <p className="text-xs text-blue-200">PMO BuddAI · Global Strategic Partners</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex gap-4 text-xs text-blue-200">
-            <span><span className="text-white font-bold">{summary.byStage.GA}</span> GA</span>
-            <span><span className="text-white font-bold">{summary.byStage.Beta}</span> Beta</span>
-            <span><span className="text-white font-bold">{summary.byStage.EAP}</span> EAP</span>
+            <span><span className="text-white font-bold">{summary.byStage?.GA || 0}</span> GA</span>
+            <span><span className="text-white font-bold">{summary.byStage?.Beta || 0}</span> Beta</span>
+            <span><span className="text-white font-bold">{summary.byStage?.EAP || 0}</span> EAP</span>
             {summary.blocked > 0 && (
               <span className="text-red-300"><span className="text-red-200 font-bold">{summary.blocked}</span> Blocked</span>
             )}
@@ -79,9 +79,9 @@ function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
             >
               <Icon size={14} />
               {tab.label}
-              {tab.id === 'exceptions' && getSummary().blocked > 0 && (
+              {tab.id === 'exceptions' && summary.blocked > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white leading-none">
-                  {getSummary().blocked}
+                  {summary.blocked}
                 </span>
               )}
             </button>
@@ -107,21 +107,21 @@ function formatSyncTime(isoString) {
   } catch { return null; }
 }
 
-export default function App() {
+function AppShell() {
   const [activeTab, setActiveTab] = useState('matrix');
   const [selectedPartner, setSelectedPartner] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
+  const { loading, summary } = useData();
 
   useEffect(() => {
     fetch('/api/health')
       .then(r => r.json())
       .then(data => {
-        const t = data.lastSync || data.last_sync || data.syncedAt;
+        const t = data.lastSyncAt || data.lastSync || data.last_sync || data.syncedAt;
         setSyncStatus({ checking: false, lastSync: formatSyncTime(t) });
       })
       .catch(() => setSyncStatus({ checking: false, lastSync: null }));
-  }, [refreshKey]);
+  }, []);
 
   const handleSelectPartner = useCallback((partner) => {
     setSelectedPartner(partner);
@@ -133,7 +133,7 @@ export default function App() {
 
   const handleRefresh = useCallback(() => {
     setSyncStatus(s => ({ ...s, checking: true }));
-    setRefreshKey(k => k + 1);
+    window.location.reload();
   }, []);
 
   const panelOpen = !!selectedPartner;
@@ -147,49 +147,58 @@ export default function App() {
         syncStatus={syncStatus}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <main className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 ${panelOpen ? 'lg:mr-0' : ''}`}>
-          {activeTab === 'matrix' && (
-            <MatrixView
-              key={refreshKey}
-              onSelectPartner={handleSelectPartner}
-              onSelectRelease={handleSelectRelease}
-            />
-          )}
-          {activeTab === 'exceptions' && (
-            <ExceptionPanel onSelectPartner={handleSelectPartner} />
-          )}
-          {activeTab === 'changelog' && (
-            <ChangelogFeed onSelectPartner={handleSelectPartner} />
-          )}
-          {activeTab === 'ask' && (
-            <AskPanel />
-          )}
-        </main>
-
-        <div
-          className={`
-            flex-shrink-0 overflow-hidden bg-white border-l border-slate-200 shadow-xl
-            transition-all duration-300 ease-in-out
-            ${panelOpen ? 'w-full sm:w-96 md:w-[420px]' : 'w-0'}
-          `}
-        >
-          {panelOpen && (
-            <PartnerView
-              partner={selectedPartner}
-              onClose={() => setSelectedPartner(null)}
-            />
-          )}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <RefreshCw size={32} className="mx-auto mb-3 text-blue-400 animate-spin" />
+            <p className="text-sm text-slate-500">Loading live data…</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          <main className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 ${panelOpen ? 'lg:mr-0' : ''}`}>
+            {activeTab === 'matrix' && (
+              <MatrixView
+                onSelectPartner={handleSelectPartner}
+                onSelectRelease={handleSelectRelease}
+              />
+            )}
+            {activeTab === 'exceptions' && (
+              <ExceptionPanel onSelectPartner={handleSelectPartner} />
+            )}
+            {activeTab === 'changelog' && (
+              <ChangelogFeed onSelectPartner={handleSelectPartner} />
+            )}
+            {activeTab === 'ask' && (
+              <AskPanel />
+            )}
+          </main>
+
+          <div
+            className={`
+              flex-shrink-0 overflow-hidden bg-white border-l border-slate-200 shadow-xl
+              transition-all duration-300 ease-in-out
+              ${panelOpen ? 'w-full sm:w-96 md:w-[420px]' : 'w-0'}
+            `}
+          >
+            {panelOpen && (
+              <PartnerView
+                partner={selectedPartner}
+                onClose={() => setSelectedPartner(null)}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-1.5 bg-white border-t border-slate-200 text-xs text-slate-400">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Live mode
+            {summary.mode === 'postgres' ? 'Live (Postgres)' : summary.mode === 'live' ? 'Live (memory)' : 'Mock data'}
           </span>
-          <span>Sources: Jira · PostgreSQL</span>
+          <span>Sources: Jira · Monday · PostgreSQL</span>
+          <span>{summary.total || 0} releases</span>
         </div>
         <span>
           {panelOpen && (
@@ -201,5 +210,13 @@ export default function App() {
         </span>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <DataProvider refreshKey={0}>
+      <AppShell />
+    </DataProvider>
   );
 }

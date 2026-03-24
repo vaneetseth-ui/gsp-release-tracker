@@ -4,7 +4,8 @@
  */
 import React from 'react';
 import { X, ExternalLink, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
-import { PRODUCTS, STAGES, getPartnerReleases } from '../data/mockData.js';
+import { PRODUCTS, STAGES } from '../data/constants.js';
+import { useData } from '../data/DataContext.jsx';
 
 function ContactBadge({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -35,7 +36,6 @@ function ReleaseCard({ release }) {
 
   return (
     <div className={`rounded-lg border p-3 space-y-2 transition-all ${release.blocked ? 'border-red-300 bg-red-50' : hasAlert ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}>
-      {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="font-semibold text-sm text-slate-800">{release.product}</div>
@@ -46,7 +46,6 @@ function ReleaseCard({ release }) {
         <StageChip stage={release.stage} />
       </div>
 
-      {/* Alert flags */}
       {hasAlert && (
         <div className="flex flex-wrap gap-1.5">
           {release.blocked && (
@@ -56,7 +55,7 @@ function ReleaseCard({ release }) {
           )}
           {release.redAccount && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-              <DollarSign size={10} /> Red Account · ${(release.arrAtRisk / 1000).toFixed(0)}K ARR at risk
+              <DollarSign size={10} /> Red Account {release.arrAtRisk ? `· $${(release.arrAtRisk / 1000).toFixed(0)}K ARR` : ''}
             </span>
           )}
           {release.missingPM && (
@@ -72,7 +71,6 @@ function ReleaseCard({ release }) {
         </div>
       )}
 
-      {/* Dates */}
       <div className="flex gap-4 text-xs">
         {release.target_date && (
           <div className="flex items-center gap-1 text-slate-500">
@@ -88,14 +86,12 @@ function ReleaseCard({ release }) {
         )}
       </div>
 
-      {/* Contacts */}
       <div className="grid grid-cols-2 gap-1">
         <ContactBadge icon={Briefcase}      label="PM"  value={release.pm} />
         <ContactBadge icon={User}           label="SE"  value={release.se_lead} />
         <ContactBadge icon={HeartHandshake} label="CSM" value={release.csm} />
       </div>
 
-      {/* Notes */}
       {release.notes && (
         <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-2 mt-1">
           {release.notes}
@@ -107,16 +103,15 @@ function ReleaseCard({ release }) {
 
 export default function PartnerView({ partner, onClose }) {
   if (!partner) return null;
+  const { getPartnerReleases } = useData();
 
   const releases = getPartnerReleases(partner);
   const activeReleases = releases.filter(r => r.stage !== 'N/A');
   const naCount = releases.filter(r => r.stage === 'N/A').length;
 
-  // Get representative contact info
   const rep = activeReleases.find(r => r.csm) || releases[0];
   const csm = rep?.csm;
 
-  // Stage summary
   const stageCounts = {};
   activeReleases.forEach(r => {
     stageCounts[r.stage] = (stageCounts[r.stage] || 0) + 1;
@@ -128,12 +123,11 @@ export default function PartnerView({ partner, onClose }) {
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-rc-navy text-white flex-shrink-0">
         <div>
           <h2 className="text-lg font-bold">{partner}</h2>
           <p className="text-xs text-blue-200">
-            {activeReleases.length} active products · {naCount} not applicable
+            {activeReleases.length} active release{activeReleases.length !== 1 ? 's' : ''}
             {exceptions.length > 0 && <span className="text-red-300 ml-2">· {exceptions.length} exception{exceptions.length > 1 ? 's' : ''}</span>}
           </p>
         </div>
@@ -146,7 +140,6 @@ export default function PartnerView({ partner, onClose }) {
         </button>
       </div>
 
-      {/* Stage summary bar */}
       <div className="flex flex-wrap gap-2 px-4 py-2.5 bg-white border-b border-slate-200 flex-shrink-0">
         {Object.entries(stageCounts).map(([stage, count]) => (
           <span key={stage} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGES[stage]?.badge || 'bg-gray-100 text-gray-600'}`}>
@@ -161,27 +154,15 @@ export default function PartnerView({ partner, onClose }) {
         )}
       </div>
 
-      {/* Releases */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-2.5">
-        {PRODUCTS.map(product => {
-          const release = releases.find(r => r.product === product);
-          if (!release || release.stage === 'N/A') return null;
-          return <ReleaseCard key={product} release={release} />;
-        })}
-
-        {/* N/A products listed compactly */}
-        {naCount > 0 && (
-          <div className="rounded-lg border border-dashed border-slate-200 px-3 py-2">
-            <p className="text-xs text-slate-400 font-medium mb-1">Not applicable</p>
-            <div className="flex flex-wrap gap-1.5">
-              {PRODUCTS.filter(p => {
-                const r = releases.find(r => r.product === p);
-                return !r || r.stage === 'N/A';
-              }).map(p => (
-                <span key={p} className="text-xs px-2 py-0.5 bg-slate-100 text-slate-400 rounded">{p}</span>
-              ))}
-            </div>
+        {activeReleases.length === 0 ? (
+          <div className="text-center py-12 text-slate-400">
+            <p className="text-sm">No active releases for {partner}</p>
           </div>
+        ) : (
+          activeReleases.map((release, idx) => (
+            <ReleaseCard key={`${release.product}-${release.jira}-${idx}`} release={release} />
+          ))
         )}
       </div>
     </div>

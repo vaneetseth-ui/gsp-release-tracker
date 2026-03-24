@@ -1,24 +1,13 @@
 /**
- * MatrixView — 17×5 color-coded release grid (hero view)
- * Rows = partners, Columns = products
+ * MatrixView — color-coded release grid (hero view)
+ * Rows = partners (from live API), Columns = products
  * Click a cell → open PartnerView panel
- * Click a row header → open PartnerView for that partner
  */
 import React, { useState } from 'react';
 import { AlertCircle, AlertTriangle, DollarSign, UserX } from 'lucide-react';
-import { PARTNERS, PRODUCTS, STAGES, getRelease, getSummary } from '../data/mockData.js';
+import { PRODUCTS, STAGES } from '../data/constants.js';
+import { useData } from '../data/DataContext.jsx';
 
-// Stage legend pill
-function StagePill({ stage }) {
-  const s = STAGES[stage] || STAGES['N/A'];
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${s.badge}`}>
-      {s.label}
-    </span>
-  );
-}
-
-// Individual cell in the matrix
 function Cell({ release, onClick }) {
   if (!release) {
     return (
@@ -30,7 +19,6 @@ function Cell({ release, onClick }) {
 
   const stage = release.stage || 'N/A';
   const s = STAGES[stage] || STAGES['N/A'];
-
   const isNA = stage === 'N/A';
   const hasAlert = release.blocked || release.redAccount || release.missingPM ||
     (release.daysInEAP && release.daysInEAP > 90);
@@ -58,14 +46,13 @@ function Cell({ release, onClick }) {
   );
 }
 
-// Summary bar at top
 function SummaryBar({ summary }) {
   const stageOrder = ['GA', 'Beta', 'EAP', 'Dev', 'Planned', 'Blocked'];
   return (
     <div className="flex flex-wrap gap-2 items-center px-4 py-2 bg-white border-b border-slate-200">
       <span className="text-xs text-slate-500 font-medium mr-1">Portfolio:</span>
       {stageOrder.map(stage => (
-        summary.byStage[stage] > 0 && (
+        (summary.byStage?.[stage] || 0) > 0 && (
           <span key={stage} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGES[stage].badge}`}>
             {STAGES[stage].label}
             <span className="font-bold">{summary.byStage[stage]}</span>
@@ -83,7 +70,7 @@ function SummaryBar({ summary }) {
 
 export default function MatrixView({ onSelectPartner, onSelectRelease }) {
   const [hoveredPartner, setHoveredPartner] = useState(null);
-  const summary = getSummary();
+  const { summary, partners, getRelease } = useData();
 
   return (
     <div className="flex flex-col h-full">
@@ -129,7 +116,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
             </tr>
           </thead>
           <tbody>
-            {PARTNERS.map((partner, idx) => {
+            {partners.map((partner, idx) => {
               const releases = PRODUCTS.map(p => getRelease(partner, p));
               const firstRelease = releases.find(r => r);
               const seLead = firstRelease?.se_lead;
@@ -146,7 +133,6 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                   onMouseEnter={() => setHoveredPartner(partner)}
                   onMouseLeave={() => setHoveredPartner(null)}
                 >
-                  {/* Partner name */}
                   <td
                     className="border border-slate-200 px-3 py-1.5 cursor-pointer hover:text-blue-700 hover:underline"
                     onClick={() => onSelectPartner(partner)}
@@ -157,7 +143,6 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     </div>
                   </td>
 
-                  {/* Product cells */}
                   {releases.map((release, pi) => (
                     <Cell
                       key={PRODUCTS[pi]}
@@ -166,7 +151,6 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     />
                   ))}
 
-                  {/* SE Lead */}
                   <td className="border border-slate-200 px-2 py-1.5 text-center">
                     {seLead ? (
                       <span className="text-xs text-slate-600">{seLead.split(' ')[0]}</span>
@@ -175,7 +159,6 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     )}
                   </td>
 
-                  {/* CSM */}
                   <td className="border border-slate-200 px-2 py-1.5 text-center">
                     {csm ? (
                       <span className="text-xs text-slate-600">{csm.split(' ')[0]}</span>
@@ -192,7 +175,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
 
       {/* Footer */}
       <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 text-xs text-slate-400 flex items-center justify-between">
-        <span>{PARTNERS.length} partners × {PRODUCTS.length} products = {PARTNERS.length * PRODUCTS.length} cells</span>
+        <span>{partners.length} partners × {PRODUCTS.length} products</span>
         <span>Click any cell or partner name for details</span>
       </div>
     </div>
