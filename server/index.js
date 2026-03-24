@@ -19,6 +19,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as db from './db.js';
 import { syncFromJira, fetchJiraFields } from './sync_jira.js';
+import { initDb, upsertReleases, saveSyncMeta, isDbAvailable } from './database.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const PORT       = process.env.PORT || 3001;
@@ -113,12 +114,25 @@ app.post('/api/ingest', (req, res) => {
     return res.status(400).json({ error: 'Body must contain a non-empty releases array' });
   }
 
+  // Write to Postgres if available, otherwise keep in memory
+  if (isDbAvailable()) {
+    try {
+      await upsertReleases(releases);
+      await saveSyncMeta({ ...meta, source: 'local-sync', releaseCount: releases.length });
+      console.log(`[ingest] Persisted ${releases.length} releases to PostgreSQL`);
+    } catch (e) {
+      console.error('[ingest] DB write error:', e.message);
+      return res.status(500).json({ error: `DB write failed: ${e.message}` });
+    }
+  }
+
+  // Always update in-memory cache too (for immediate reads)
   db.setLiveData(releases, { ...meta, source: 'local-sync' });
   console.log(`[ingest] Received ${releases.length} releases from local sync script`);
   res.json({
     success:    true,
     releases:   releases.length,
-    mode:       'live',
+    mode:       isDbAvailable() ? 'postgres' : 'live',
     fetchedAt:  meta.fetchedAt || new Date().toISOString(),
   });
 });
@@ -258,8 +272,16 @@ app.get('*', (_req, res) => {
   res.sendFile(join(DIST, 'index.html'));
 });
 
-app.listen(PORT, () => {
+// ── Startup ───────────────────────────────────────────────────────────────────
+app.listen(PORT, async () => {
   console.log(`\n🚀  GSP Release Tracker API`);
   console.log(`   http://localhost:${PORT}/api/health`);
-  console.log(`   http://localhost:${PORT}          (React dashboard)\n`);
+  console.log(`   http://localhost:${PORT}          (React dashboard)`);
+  console.log(`   DB mode: ${isDbAvailable() ? '✓ PostgreSQL' : '⚠ mock data (no DATABASE_URL)'}\n`);
+
+  // Init DB schema and preload data from Postgres into memory cache
+  if (isDbAvailable()) {
+    await initDb();
+    await db.ensureDataLoaded();
+  }
 });

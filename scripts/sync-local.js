@@ -241,33 +241,57 @@ async function main() {
   const partners = [...new Set(releases.map(r => r.partner))].slice(0, 8);
   console.log(`  Partners found: ${partners.join(', ')}${partners.length < releases.length ? '…' : ''}`);
 
-  // 4. Push to Heroku
+  // 4. Wake up Heroku dyno (free/eco dynos sleep after 30 min inactivity)
+  console.log(`\n▶ Waking up Heroku dyno…`);
+  try {
+    const wakeRes = await fetch(`${CONFIG.herokuUrl}/api/health`, { signal: AbortSignal.timeout(30000) });
+    if (wakeRes.ok) console.log('  ✓ Dyno awake');
+  } catch {
+    console.log('  ⚠ Wake-up ping timed out — proceeding anyway');
+  }
+
+  // 5. Push to Heroku
   console.log(`\n▶ Pushing to ${CONFIG.herokuUrl}/api/ingest…`);
   const headers = { 'Content-Type': 'application/json' };
   if (CONFIG.ingestToken) headers['Authorization'] = `Bearer ${CONFIG.ingestToken}`;
 
-  const ingestRes = await fetch(`${CONFIG.herokuUrl}/api/ingest`, {
-    method:  'POST',
-    headers,
-    body: JSON.stringify({
-      releases,
-      meta: {
-        totalIssues: unique.length,
-        projects:    ['GSP', 'PTR'],
-        fetchedAt:   new Date().toISOString(),
-        source:      'local-sync',
-      },
-    }),
-  });
-
-  const result = await ingestRes.json();
-
-  if (!ingestRes.ok) {
-    console.error(`\n✗ Ingest failed: ${JSON.stringify(result)}`);
+  let ingestRes;
+  try {
+    ingestRes = await fetch(`${CONFIG.herokuUrl}/api/ingest`, {
+      method:  'POST',
+      headers,
+      signal:  AbortSignal.timeout(60000), // 60s timeout for large payloads
+      body: JSON.stringify({
+        releases,
+        meta: {
+          totalIssues:  unique.length,
+          projects:     ['GSP', 'PTR'],
+          fetchedAt:    new Date().toISOString(),
+          source:       'local-sync',
+        },
+      }),
+    });
+  } catch (e) {
+    console.error(`\n✗ Network error pushing to Heroku: ${e.message}`);
+    console.error('  Check your internet connection and try again.');
     process.exit(1);
   }
 
-  console.log(`\n✅  Done! ${result.releases} releases now live on the dashboard.`);
+  let result;
+  try {
+    result = await ingestRes.json();
+  } catch {
+    const text = await ingestRes.text().catch(() => '(unreadable)');
+    console.error(`\n✗ Heroku returned non-JSON (status ${ingestRes.status}):\n  ${text.slice(0, 200)}`);
+    process.exit(1);
+  }
+
+  if (!ingestRes.ok) {
+    console.error(`\n✗ Ingest failed (${ingestRes.status}): ${JSON.stringify(result)}`);
+    process.exit(1);
+  }
+
+  console.log(`\n✅  Done! ${result.releases} releases now in ${result.mode} mode.`);
   console.log(`   ${CONFIG.herokuUrl}\n`);
 }
 
