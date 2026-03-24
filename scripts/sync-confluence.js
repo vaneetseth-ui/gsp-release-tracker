@@ -9,10 +9,12 @@
  *   HEROKU_URL=https://your-app.herokuapp.com INGEST_TOKEN=xxx node scripts/sync-confluence.js
  *   DASHBOARD_API=http://127.0.0.1:3001 node scripts/sync-confluence.js
  */
-const base = (process.env.DASHBOARD_API || process.env.HEROKU_URL || 'http://127.0.0.1:3001').replace(
-  /\/$/,
-  ''
-);
+const DEFAULT_PROD_API = 'https://gsp-release-tracker-ffa0c1ec9485.herokuapp.com';
+const base = (
+  process.env.DASHBOARD_API ||
+  process.env.HEROKU_URL ||
+  DEFAULT_PROD_API
+).replace(/\/$/, '');
 const token = process.env.INGEST_TOKEN || '';
 
 async function main() {
