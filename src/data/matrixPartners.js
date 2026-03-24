@@ -68,7 +68,7 @@ export function matrixPartnerBucket(rawPartner) {
   scored.sort((x, y) => y.len - x.len);
 
   for (const { key, token } of scored) {
-    if (p === token || p.includes(token) || token.includes(p)) return key;
+    if (p === token || (token.length >= 3 && p.includes(token))) return key;
   }
 
   return null;
