@@ -1,0 +1,33 @@
+name: Sync Jira → GSP Dashboard
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # Every hour on the hour
+  workflow_dispatch:        # Manual trigger from GitHub UI (Actions tab → Run workflow)
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Jira sync
+        env:
+          JIRA_URL:    https://jira.ringcentral.com
+          JIRA_PAT:    ${{ secrets.JIRA_PAT }}
+          HEROKU_URL:  https://gsp-release-tracker-ffa0c1ec9485.herokuapp.com
+        run: node scripts/sync-local.js
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "Sync completed at $(date -u)"
+          echo "Dashboard: https://gsp-release-tracker-ffa0c1ec9485.herokuapp.com"

@@ -100,7 +100,7 @@ app.get('/api/sync/fields', async (_req, res) => {
 // ── Ingest endpoint — called by local sync script (runs inside corporate network) ──
 // POST /api/ingest  { releases: [...], meta: { totalIssues, fetchedAt, ... } }
 // Optional bearer token auth: set INGEST_TOKEN env var on Heroku to protect the endpoint
-app.post('/api/ingest', (req, res) => {
+app.post('/api/ingest', async (req, res) => {
   const token = process.env.INGEST_TOKEN;
   if (token) {
     const auth = req.headers['authorization'] || '';
