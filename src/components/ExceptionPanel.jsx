@@ -41,12 +41,12 @@ function ExceptionCard({ release, types, onSelectPartner }) {
       </div>
 
       <div className="flex flex-wrap gap-3 text-xs text-slate-600 items-center">
-        {release.jira && (
-          <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
+        {(release.jiraKeys || []).map(j => (
+          <a key={j.key} href={j.url} target="_blank" rel="noopener noreferrer"
              className="font-mono text-blue-600 hover:underline hover:text-blue-800">
-            {release.jira}
+            {j.key}
           </a>
-        )}
+        ))}
         {release.source && (() => {
           const isJira = release.source === 'jira';
           const label = isJira ? 'Jira' : 'Monday';

@@ -77,13 +77,13 @@ function ReleaseCard({ release }) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            {release.jira && (
-              <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {(release.jiraKeys || []).map(j => (
+              <a key={j.key} href={j.url} target="_blank" rel="noopener noreferrer"
                  className="text-xs text-blue-600 font-mono hover:underline hover:text-blue-800">
-                {release.jira}
+                {j.key}
               </a>
-            )}
+            ))}
             <SourceBadge source={release.source} sourceUrl={release.sourceUrl} />
           </div>
         </div>

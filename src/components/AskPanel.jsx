@@ -52,7 +52,9 @@ function Tier1Result({ result }) {
           {r.actual_date  && <div><p className="text-xs text-slate-400 mb-0.5">Actual Date</p><p className="font-medium">{r.actual_date}</p></div>}
           {r.pm           && <div><p className="text-xs text-slate-400 mb-0.5">PM</p><p className="font-medium">{r.pm}</p></div>}
           {r.se_lead      && <div><p className="text-xs text-slate-400 mb-0.5">SE Lead</p><p className="font-medium">{r.se_lead}</p></div>}
-          {r.jira_number  && <div><p className="text-xs text-slate-400 mb-0.5">Jira</p><p className="font-medium font-mono"><a href={`https://jira.ringcentral.com/browse/${r.jira_number}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline hover:text-blue-900">{r.jira_number}</a></p></div>}
+          {r.jira_number  && <div><p className="text-xs text-slate-400 mb-0.5">Jira</p><p className="font-medium font-mono flex flex-wrap gap-1.5">{r.jira_number.split(/[,;]\s*/).map(k => k.trim()).filter(Boolean).map(k => (
+            <a key={k} href={`https://jira.ringcentral.com/browse/${k}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline hover:text-blue-900">{k}</a>
+          ))}</p></div>}
           {r.days_in_eap  && <div><p className="text-xs text-slate-400 mb-0.5">Days in EAP</p><p className={`font-medium ${r.days_in_eap > 90 ? 'text-red-600 font-bold' : ''}`}>{r.days_in_eap}d</p></div>}
           {r.reporter     && <div><p className="text-xs text-slate-400 mb-0.5">Reporter</p><p className="font-medium">{r.reporter}</p></div>}
           {r.se_region    && <div><p className="text-xs text-slate-400 mb-0.5">SE Region</p><p className="font-medium">{r.se_region}</p></div>}

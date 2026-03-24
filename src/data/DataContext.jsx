@@ -8,12 +8,22 @@ const DataContext = createContext(null);
 
 const JIRA_BASE = 'https://jira.ringcentral.com/browse';
 
+function splitJiraKeys(raw) {
+  if (!raw) return [];
+  return raw.split(/[,;]\s*/).map(k => k.trim()).filter(Boolean);
+}
+
 function normalizeRelease(r) {
   const jira = r.jira_number || r.jira_key || r.jira || null;
+  const jiraKeys = splitJiraKeys(jira).map(key => ({
+    key,
+    url: `${JIRA_BASE}/${key}`,
+  }));
   return {
     ...r,
     jira,
-    jiraUrl:          jira ? `${JIRA_BASE}/${jira}` : null,
+    jiraKeys,
+    jiraUrl:          jiraKeys.length === 1 ? jiraKeys[0].url : null,
     blocked:          !!(r.blocked),
     redAccount:       !!(r.red_account || r.redAccount),
     missingPM:        !!(r.missing_pm  || r.missingPM),
