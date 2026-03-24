@@ -19,7 +19,8 @@
     "start": "node server/index.js",
     "sync": "node scripts/sync-local.js",
     "sync:confluence": "node scripts/sync-confluence.js",
-    "sync:confluence:local": "node scripts/confluence-ingest-local.mjs"
+    "sync:confluence:local": "node scripts/confluence-ingest-local.mjs",
+    "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
