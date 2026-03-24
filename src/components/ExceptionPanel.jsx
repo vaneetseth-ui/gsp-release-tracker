@@ -42,7 +42,10 @@ function ExceptionCard({ release, types, onSelectPartner }) {
 
       <div className="flex flex-wrap gap-3 text-xs text-slate-600">
         {release.jira && (
-          <span className="font-mono text-blue-600">{release.jira}</span>
+          <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
+             className="font-mono text-blue-600 hover:underline hover:text-blue-800">
+            {release.jira}
+          </a>
         )}
         {release.daysOverdue > 0 && (
           <span className="flex items-center gap-1 text-red-600 font-semibold">

@@ -6,10 +6,14 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 
 const DataContext = createContext(null);
 
+const JIRA_BASE = 'https://jira.ringcentral.com/browse';
+
 function normalizeRelease(r) {
+  const jira = r.jira_number || r.jira_key || r.jira || null;
   return {
     ...r,
-    jira:        r.jira_number || r.jira_key || r.jira || null,
+    jira,
+    jiraUrl:     jira ? `${JIRA_BASE}/${jira}` : null,
     blocked:     !!(r.blocked),
     redAccount:  !!(r.red_account || r.redAccount),
     missingPM:   !!(r.missing_pm  || r.missingPM),

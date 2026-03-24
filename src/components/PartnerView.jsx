@@ -40,7 +40,10 @@ function ReleaseCard({ release }) {
         <div>
           <div className="font-semibold text-sm text-slate-800">{release.product}</div>
           {release.jira && (
-            <span className="text-xs text-blue-600 font-mono">{release.jira}</span>
+            <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
+               className="text-xs text-blue-600 font-mono hover:underline hover:text-blue-800">
+              {release.jira}
+            </a>
           )}
         </div>
         <StageChip stage={release.stage} />
