@@ -59,6 +59,19 @@ export async function initDb() {
         days_overdue INTEGER,
         days_in_eap  INTEGER,
         arr_at_risk  NUMERIC,
+        issue_type        TEXT,
+        priority          TEXT,
+        reporter          TEXT,
+        resolution        TEXT,
+        fix_version       TEXT,
+        requested_quarter TEXT,
+        target_quarter    TEXT,
+        se_region         TEXT,
+        brand             TEXT,
+        assignee          TEXT,
+        source            TEXT,
+        source_url        TEXT,
+        last_updated      TEXT,
         synced_at    TIMESTAMP DEFAULT NOW()
       );
 
@@ -71,6 +84,16 @@ export async function initDb() {
         created_at    TIMESTAMP DEFAULT NOW()
       );
     `);
+    const newCols = [
+      ['issue_type','TEXT'], ['priority','TEXT'], ['reporter','TEXT'],
+      ['resolution','TEXT'], ['fix_version','TEXT'], ['requested_quarter','TEXT'],
+      ['target_quarter','TEXT'], ['se_region','TEXT'], ['brand','TEXT'],
+      ['assignee','TEXT'], ['source','TEXT'], ['source_url','TEXT'], ['last_updated','TEXT'],
+    ];
+    for (const [col, type] of newCols) {
+      await client.query(`ALTER TABLE releases ADD COLUMN IF NOT EXISTS ${col} ${type}`).catch(() => {});
+    }
+
     console.log('[db] PostgreSQL schema ready');
   } finally {
     client.release();
@@ -93,8 +116,12 @@ export async function upsertReleases(releases) {
         INSERT INTO releases
           (jira_key, partner, product, stage, target_date, actual_date, jira_number,
            pm, se_lead, csm, notes, blocked, red_account, missing_pm,
-           days_overdue, days_in_eap, arr_at_risk, synced_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NOW())
+           days_overdue, days_in_eap, arr_at_risk,
+           issue_type, priority, reporter, resolution, fix_version,
+           requested_quarter, target_quarter, se_region, brand, assignee,
+           source, source_url, last_updated, synced_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+                $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,NOW())
       `, [
         r.jira_key    || r.jira_number || null,
         r.partner     || null,
@@ -113,6 +140,19 @@ export async function upsertReleases(releases) {
         r.days_overdue  ?? null,
         r.days_in_eap   ?? null,
         r.arr_at_risk   ?? null,
+        r.issue_type        || null,
+        r.priority          || null,
+        r.reporter          || null,
+        r.resolution        || null,
+        r.fix_version       || null,
+        r.requested_quarter || null,
+        r.target_quarter    || null,
+        r.se_region         || null,
+        r.brand             || null,
+        r.assignee          || null,
+        r.source            || null,
+        r.source_url        || null,
+        r.last_updated      || null,
       ]);
     }
 

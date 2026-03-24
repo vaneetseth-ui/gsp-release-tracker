@@ -54,7 +54,21 @@ function Tier1Result({ result }) {
           {r.se_lead      && <div><p className="text-xs text-slate-400 mb-0.5">SE Lead</p><p className="font-medium">{r.se_lead}</p></div>}
           {r.jira_number  && <div><p className="text-xs text-slate-400 mb-0.5">Jira</p><p className="font-medium font-mono"><a href={`https://jira.ringcentral.com/browse/${r.jira_number}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline hover:text-blue-900">{r.jira_number}</a></p></div>}
           {r.days_in_eap  && <div><p className="text-xs text-slate-400 mb-0.5">Days in EAP</p><p className={`font-medium ${r.days_in_eap > 90 ? 'text-red-600 font-bold' : ''}`}>{r.days_in_eap}d</p></div>}
+          {r.reporter     && <div><p className="text-xs text-slate-400 mb-0.5">Reporter</p><p className="font-medium">{r.reporter}</p></div>}
+          {r.se_region    && <div><p className="text-xs text-slate-400 mb-0.5">SE Region</p><p className="font-medium">{r.se_region}</p></div>}
+          {r.issue_type   && <div><p className="text-xs text-slate-400 mb-0.5">Type</p><p className="font-medium">{r.issue_type}</p></div>}
+          {r.priority     && <div><p className="text-xs text-slate-400 mb-0.5">Priority</p><p className="font-medium">{r.priority}</p></div>}
+          {r.requested_quarter && <div><p className="text-xs text-slate-400 mb-0.5">Requested Q</p><p className="font-medium">{r.requested_quarter}</p></div>}
+          {r.target_quarter    && <div><p className="text-xs text-slate-400 mb-0.5">Target Q</p><p className="font-medium">{r.target_quarter}</p></div>}
         </div>
+        {r.source_url && (
+          <div className="px-4 pb-2">
+            <a href={r.source_url} target="_blank" rel="noopener noreferrer"
+               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold ${r.source === 'jira' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200'} hover:opacity-80`}>
+              Open in {r.source === 'jira' ? 'Jira' : 'Monday'} <span className="text-[10px]">↗</span>
+            </a>
+          </div>
+        )}
         {r.notes && <div className="px-4 pb-4 text-xs text-slate-500 italic border-t border-slate-100 pt-3">{r.notes}</div>}
         {(r.blocked || r.red_account || r.missing_pm) && (
           <div className="px-4 pb-4 flex gap-2 flex-wrap">

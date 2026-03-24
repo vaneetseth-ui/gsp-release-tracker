@@ -3,7 +3,7 @@
  * Shows all partners with: blocked items, overdue EAP, red accounts, missing PMs
  */
 import React, { useState } from 'react';
-import { AlertCircle, DollarSign, UserX, AlertTriangle, Clock, Filter } from 'lucide-react';
+import { AlertCircle, DollarSign, UserX, AlertTriangle, Clock, Filter, ExternalLink } from 'lucide-react';
 import { STAGES } from '../data/constants.js';
 import { useData } from '../data/DataContext.jsx';
 
@@ -40,13 +40,26 @@ function ExceptionCard({ release, types, onSelectPartner }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+      <div className="flex flex-wrap gap-3 text-xs text-slate-600 items-center">
         {release.jira && (
           <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
              className="font-mono text-blue-600 hover:underline hover:text-blue-800">
             {release.jira}
           </a>
         )}
+        {release.source && (() => {
+          const isJira = release.source === 'jira';
+          const label = isJira ? 'Jira' : 'Monday';
+          const colors = isJira ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200';
+          return release.sourceUrl ? (
+            <a href={release.sourceUrl} target="_blank" rel="noopener noreferrer"
+               className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors} hover:opacity-80`}>
+              {label} <ExternalLink size={8} />
+            </a>
+          ) : (
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors}`}>{label}</span>
+          );
+        })()}
         {release.daysOverdue > 0 && (
           <span className="flex items-center gap-1 text-red-600 font-semibold">
             <Clock size={11} /> {release.daysOverdue} days overdue
@@ -65,6 +78,9 @@ function ExceptionCard({ release, types, onSelectPartner }) {
         {release.target_date && (
           <span className="text-slate-500">Target: {release.target_date}</span>
         )}
+        {release.seRegion && (
+          <span className="text-slate-500">Region: <span className="font-medium text-slate-700">{release.seRegion}</span></span>
+        )}
       </div>
 
       <div className="flex gap-4 text-xs text-slate-500">
@@ -72,6 +88,7 @@ function ExceptionCard({ release, types, onSelectPartner }) {
         {!release.pm        && <span className="text-amber-600 font-medium flex items-center gap-0.5"><UserX size={10} /> PM unassigned</span>}
         {release.se_lead    && <span>SE: <span className="font-medium text-slate-700">{release.se_lead}</span></span>}
         {release.csm        && <span>CSM: <span className="font-medium text-slate-700">{release.csm}</span></span>}
+        {release.reporter   && <span>Reporter: <span className="font-medium text-slate-700">{release.reporter}</span></span>}
       </div>
 
       {release.notes && (

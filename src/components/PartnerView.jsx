@@ -3,7 +3,7 @@
  * Shows all releases for a partner + key contacts + exceptions
  */
 import React from 'react';
-import { X, ExternalLink, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { X, ExternalLink, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2, Tag, MapPin, Flag } from 'lucide-react';
 import { PRODUCTS, STAGES } from '../data/constants.js';
 import { useData } from '../data/DataContext.jsx';
 
@@ -27,6 +27,32 @@ function StageChip({ stage }) {
   );
 }
 
+function SourceBadge({ source, sourceUrl }) {
+  if (!source) return null;
+  const isJira = source === 'jira';
+  const label = isJira ? 'Jira' : 'Monday';
+  const colors = isJira ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200';
+  if (sourceUrl) {
+    return (
+      <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
+         className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors} hover:opacity-80`}>
+        {label} <ExternalLink size={8} />
+      </a>
+    );
+  }
+  return <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colors}`}>{label}</span>;
+}
+
+function MetaRow({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="text-xs text-slate-500">
+      <span className="text-slate-400">{label}:</span>{' '}
+      <span className="font-medium text-slate-700">{value}</span>
+    </div>
+  );
+}
+
 function ReleaseCard({ release }) {
   const isNA = release.stage === 'N/A';
   if (isNA) return null;
@@ -37,14 +63,29 @@ function ReleaseCard({ release }) {
   return (
     <div className={`rounded-lg border p-3 space-y-2 transition-all ${release.blocked ? 'border-red-300 bg-red-50' : hasAlert ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}>
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="font-semibold text-sm text-slate-800">{release.product}</div>
-          {release.jira && (
-            <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
-               className="text-xs text-blue-600 font-mono hover:underline hover:text-blue-800">
-              {release.jira}
-            </a>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-slate-800">{release.product}</span>
+            {release.issueType && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                <Tag size={8} /> {release.issueType}
+              </span>
+            )}
+            {release.priority && release.priority !== 'Normal' && (
+              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${release.priority === 'Critical' || release.priority === 'Blocker' ? 'bg-red-100 text-red-700' : release.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>
+                <Flag size={8} /> {release.priority}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            {release.jira && (
+              <a href={release.jiraUrl} target="_blank" rel="noopener noreferrer"
+                 className="text-xs text-blue-600 font-mono hover:underline hover:text-blue-800">
+                {release.jira}
+              </a>
+            )}
+            <SourceBadge source={release.source} sourceUrl={release.sourceUrl} />
+          </div>
         </div>
         <StageChip stage={release.stage} />
       </div>
@@ -74,7 +115,7 @@ function ReleaseCard({ release }) {
         </div>
       )}
 
-      <div className="flex gap-4 text-xs">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         {release.target_date && (
           <div className="flex items-center gap-1 text-slate-500">
             <Calendar size={11} />
@@ -87,12 +128,27 @@ function ReleaseCard({ release }) {
             <span>Live: <span className="font-medium">{release.actual_date}</span></span>
           </div>
         )}
+        {release.seRegion && (
+          <div className="flex items-center gap-1 text-slate-500">
+            <MapPin size={11} />
+            <span className="font-medium text-slate-700">{release.seRegion}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-1">
-        <ContactBadge icon={Briefcase}      label="PM"  value={release.pm} />
-        <ContactBadge icon={User}           label="SE"  value={release.se_lead} />
-        <ContactBadge icon={HeartHandshake} label="CSM" value={release.csm} />
+        <ContactBadge icon={Briefcase}      label="PM"       value={release.pm} />
+        <ContactBadge icon={User}           label="SE"       value={release.se_lead} />
+        <ContactBadge icon={HeartHandshake} label="CSM"      value={release.csm} />
+        <ContactBadge icon={User}           label="Reporter" value={release.reporter} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-1 text-xs text-slate-500">
+        <MetaRow label="Requested Q" value={release.requestedQuarter} />
+        <MetaRow label="Target Q"    value={release.targetQuarter} />
+        <MetaRow label="Fix Ver"     value={release.fixVersion} />
+        <MetaRow label="Brand"       value={release.brand} />
+        <MetaRow label="Resolution"  value={release.resolution !== 'Unresolved' ? release.resolution : null} />
       </div>
 
       {release.notes && (
