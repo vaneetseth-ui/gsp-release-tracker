@@ -1,8 +1,8 @@
 /**
  * DataContext — fetches live data from /api/* and provides it to all components.
- * Replaces all mockData imports for actual release/summary/changelog data.
+ * Includes global date-range filtering that all views respect transparently.
  */
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 const DataContext = createContext(null);
 
@@ -34,12 +34,30 @@ function normalizeChangelog(c) {
   };
 }
 
+function getReleaseDate(r) {
+  return r.last_updated || r.target_date || null;
+}
+
+function computeSummary(data) {
+  const active = data.filter(r => r.stage !== 'N/A');
+  const byStage = {};
+  active.forEach(r => { byStage[r.stage] = (byStage[r.stage] || 0) + 1; });
+  return {
+    total:       active.length,
+    byStage,
+    blocked:     data.filter(r => r.blocked).length,
+    redAccounts: data.filter(r => r.redAccount).length,
+    missingPM:   data.filter(r => r.missingPM).length,
+  };
+}
+
 export function DataProvider({ children, refreshKey }) {
-  const [releases, setReleases]   = useState([]);
-  const [summary, setSummary]     = useState({ total: 0, byStage: {}, blocked: 0, redAccounts: 0, missingPM: 0 });
-  const [changelog, setChangelog] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
+  const [allReleases, setAllReleases] = useState([]);
+  const [serverSummary, setServerSummary] = useState({ total: 0, byStage: {}, blocked: 0, redAccounts: 0, missingPM: 0 });
+  const [changelog, setChangelog]     = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [dateRange, setDateRange]     = useState({ from: null, to: null });
 
   useEffect(() => {
     setLoading(true);
@@ -51,8 +69,8 @@ export function DataProvider({ children, refreshKey }) {
       fetch('/api/changelog').then(r => r.ok ? r.json() : []).catch(() => []),
     ])
       .then(([rels, sum, cl]) => {
-        setReleases((rels || []).map(normalizeRelease));
-        if (sum) setSummary(sum);
+        setAllReleases((rels || []).map(normalizeRelease));
+        if (sum) setServerSummary(sum);
         setChangelog((cl || []).map(normalizeChangelog));
         setLoading(false);
       })
@@ -62,22 +80,50 @@ export function DataProvider({ children, refreshKey }) {
       });
   }, [refreshKey]);
 
+  const releases = useMemo(() => {
+    const { from, to } = dateRange;
+    if (!from && !to) return allReleases;
+
+    return allReleases.filter(r => {
+      const d = getReleaseDate(r);
+      if (!d) return false;
+      const dateStr = d.slice(0, 10);
+      if (from && dateStr < from) return false;
+      if (to   && dateStr > to)   return false;
+      return true;
+    });
+  }, [allReleases, dateRange]);
+
+  const isFiltered = !!(dateRange.from || dateRange.to);
+
+  const summary = useMemo(() => {
+    if (!isFiltered) return serverSummary;
+    return { ...serverSummary, ...computeSummary(releases) };
+  }, [isFiltered, serverSummary, releases]);
+
   const partners = useMemo(
     () => [...new Set(releases.map(r => r.partner).filter(Boolean))].sort(),
     [releases]
   );
 
-  const getRelease = (partner, product) =>
-    releases.find(r => r.partner === partner && r.product === product) || null;
+  const getRelease = useCallback((partner, product) =>
+    releases.find(r => r.partner === partner && r.product === product) || null,
+    [releases]
+  );
 
-  const getPartnerReleases = (partner) =>
-    releases.filter(r => r.partner === partner);
+  const getPartnerReleases = useCallback((partner) =>
+    releases.filter(r => r.partner === partner),
+    [releases]
+  );
 
   const value = useMemo(() => ({
-    releases, summary, changelog, partners,
+    releases, allReleases, summary, changelog, partners,
     getRelease, getPartnerReleases,
+    dateRange, setDateRange, isFiltered,
     loading, error,
-  }), [releases, summary, changelog, partners, loading, error]);
+  }), [releases, allReleases, summary, changelog, partners,
+       getRelease, getPartnerReleases,
+       dateRange, isFiltered, loading, error]);
 
   return (
     <DataContext.Provider value={value}>

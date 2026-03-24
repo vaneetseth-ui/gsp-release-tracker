@@ -1,9 +1,29 @@
 /**
- * UI constants — stage display metadata and product list.
+ * UI constants — stage display metadata, product list, and canonical GSP partners.
  * These are display-layer only; actual data comes from the API.
  */
 
 export const PRODUCTS = ['Nova IVA', 'RingCX', 'AIR', 'MVP', 'ACO'];
+
+export const GSP_PARTNERS = [
+  'AT&T',
+  'Avaya ACO',
+  'BT',
+  'Charter - ENT',
+  'Charter - SMB',
+  'DT',
+  'DT - Unify',
+  'Ecotel',
+  'Frontier',
+  'MCM',
+  "RISE Amer",
+  "RISE Int'n",
+  'Telus',
+  'Unify',
+  'Verizon',
+  'Versatel',
+  'Vodafone',
+];
 
 export const STAGES = {
   GA:       { label: 'GA',       color: 'bg-emerald-500', text: 'text-white',    badge: 'bg-emerald-100 text-emerald-800', order: 1 },

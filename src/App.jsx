@@ -10,6 +10,7 @@ import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
 import AskPanel        from './components/AskPanel.jsx';
+import TimelineFilter  from './components/TimelineFilter.jsx';
 import { DataProvider, useData } from './data/DataContext.jsx';
 
 const TABS = [
@@ -155,6 +156,8 @@ function AppShell() {
           </div>
         </div>
       ) : (
+        <>
+        <TimelineFilter />
         <div className="flex flex-1 overflow-hidden">
           <main className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 ${panelOpen ? 'lg:mr-0' : ''}`}>
             {activeTab === 'matrix' && (
@@ -189,6 +192,7 @@ function AppShell() {
             )}
           </div>
         </div>
+        </>
       )}
 
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-1.5 bg-white border-t border-slate-200 text-xs text-slate-400">

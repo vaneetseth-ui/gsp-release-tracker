@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import { AlertCircle, AlertTriangle, DollarSign, UserX } from 'lucide-react';
-import { PRODUCTS, STAGES } from '../data/constants.js';
+import { PRODUCTS, STAGES, GSP_PARTNERS } from '../data/constants.js';
 import { useData } from '../data/DataContext.jsx';
 
 function Cell({ release, onClick }) {
@@ -70,7 +70,7 @@ function SummaryBar({ summary }) {
 
 export default function MatrixView({ onSelectPartner, onSelectRelease }) {
   const [hoveredPartner, setHoveredPartner] = useState(null);
-  const { summary, partners, getRelease } = useData();
+  const { summary, getRelease } = useData();
 
   return (
     <div className="flex flex-col h-full">
@@ -116,7 +116,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
             </tr>
           </thead>
           <tbody>
-            {partners.map((partner, idx) => {
+            {GSP_PARTNERS.map((partner, idx) => {
               const releases = PRODUCTS.map(p => getRelease(partner, p));
               const firstRelease = releases.find(r => r);
               const seLead = firstRelease?.se_lead;
@@ -175,7 +175,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
 
       {/* Footer */}
       <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 text-xs text-slate-400 flex items-center justify-between">
-        <span>{partners.length} partners × {PRODUCTS.length} products</span>
+        <span>{GSP_PARTNERS.length} GSP partners × {PRODUCTS.length} products</span>
         <span>Click any cell or partner name for details</span>
       </div>
     </div>
