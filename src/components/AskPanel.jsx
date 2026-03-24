@@ -293,23 +293,25 @@ export default function AskPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-transparent">
+    <div className="flex flex-col h-full min-h-0 bg-transparent text-base">
 
-      <div className="flex items-center justify-between px-5 sm:px-6 py-4 flex-shrink-0 border-b border-slate-100/80">
+      <div className="flex items-center justify-between px-5 sm:px-6 py-4 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-700/80">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2 tracking-tight">
-            <Sparkles size={15} className="text-rc-orange shrink-0" strokeWidth={1.75} />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
+            <Sparkles size={18} className="text-rc-orange shrink-0" strokeWidth={2} />
             Ask
           </h2>
-          <p className="text-xs text-slate-500 mt-1 font-medium">Natural language queries across the tracker</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-semibold">
+            Natural language queries across the tracker
+          </p>
         </div>
         {messages.length > 0 && (
           <button
             type="button"
             onClick={() => setMessages([])}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors ring-1 ring-slate-200/80"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors ring-1 ring-slate-200/80 dark:ring-slate-600"
           >
-            <RotateCcw size={12} strokeWidth={1.75} />
+            <RotateCcw size={14} strokeWidth={2} />
             Clear
           </button>
         )}
@@ -362,8 +364,8 @@ export default function AskPanel() {
       </div>
 
       {/* Input bar */}
-      <div className="flex-shrink-0 px-5 sm:px-6 py-4 bg-white/80 backdrop-blur-sm border-t border-slate-100">
-        <div className="flex gap-2 items-end bg-slate-50/80 rounded-2xl px-4 py-2.5 ring-1 ring-slate-200/70 focus-within:ring-2 focus-within:ring-sky-200/80 focus-within:bg-white transition-all">
+      <div className="flex-shrink-0 px-5 sm:px-6 py-4 bg-white/80 dark:bg-slate-900/85 backdrop-blur-sm border-t border-slate-100 dark:border-slate-700">
+        <div className="flex gap-2 items-end bg-slate-50/80 dark:bg-slate-800/80 rounded-2xl px-4 py-2.5 ring-1 ring-slate-200/70 dark:ring-slate-600 focus-within:ring-2 focus-within:ring-sky-200/80 dark:focus-within:ring-sky-600 focus-within:bg-white dark:focus-within:bg-slate-800 transition-all">
           <textarea
             ref={inputRef}
             rows={1}
@@ -371,7 +373,7 @@ export default function AskPanel() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Ask about a partner, product, exceptions, or say 'brief me on escalations'…"
-            className="flex-1 bg-transparent text-sm text-slate-800 placeholder:text-slate-400 resize-none outline-none leading-5 py-1 max-h-28 overflow-y-auto"
+            className="flex-1 bg-transparent text-sm sm:text-base text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none leading-5 py-1 max-h-28 overflow-y-auto"
             style={{ minHeight: '1.25rem' }}
             disabled={loading}
           />
@@ -379,12 +381,14 @@ export default function AskPanel() {
             type="button"
             onClick={() => handleSubmit()}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-900 hover:bg-rc-blue disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5 shadow-sm"
+            className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 hover:bg-rc-blue dark:hover:bg-rc-blue dark:hover:text-white disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5 shadow-sm"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
           </button>
         </div>
-        <p className="text-xs text-slate-400 text-center mt-2">Enter to send · Shift+Enter for new line</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-2">
+          Enter to send · Shift+Enter for new line
+        </p>
       </div>
     </div>
   );

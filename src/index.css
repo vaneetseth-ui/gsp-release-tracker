@@ -6,16 +6,27 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: 16px;
+  }
+
+  @media (min-width: 640px) {
+    html {
+      font-size: 17px;
+    }
   }
 
   body {
-    @apply font-sans text-slate-800 antialiased;
+    @apply font-sans text-slate-800 dark:text-slate-100 antialiased;
     background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 45%, #eef2f7 100%);
     min-height: 100vh;
   }
 
+  html.dark body {
+    background: linear-gradient(165deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+  }
+
   ::selection {
-    @apply bg-sky-100 text-slate-900;
+    @apply bg-sky-100 text-slate-900 dark:bg-sky-900 dark:text-sky-100;
   }
 }
 
@@ -34,5 +45,11 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #e2e8f0;
     border-radius: 999px;
+  }
+  html.dark .scrollbar-thin {
+    scrollbar-color: #475569 transparent;
+  }
+  html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #475569;
   }
 }

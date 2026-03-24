@@ -12,6 +12,12 @@ import {
   PRODUCT_AREA_GROUPS,
   normalizeProductArea,
 } from '../data/constants.js';
+import {
+  OTHER_MATRIX_BUCKET,
+  STRATEGIC_PARTNER_ORDER,
+  matrixPartnerBucket,
+  pickRepresentativeRelease,
+} from '../data/matrixPartners.js';
 import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
 
 const DataContext = createContext(null);
@@ -64,6 +70,13 @@ function getReleaseDateForFilter(r) {
 
 function partnersFromReleases(releases) {
   return [...new Set(releases.map((r) => r.partner))].sort();
+}
+
+function buildMatrixPartnerRows(releases) {
+  const hasOther = releases.some((r) => matrixPartnerBucket(r.partner) == null);
+  const rows = [...STRATEGIC_PARTNER_ORDER];
+  if (hasOther) rows.push(OTHER_MATRIX_BUCKET);
+  return rows;
 }
 
 function computeSummary(releases) {
@@ -141,16 +154,38 @@ export function DataProvider({ children }) {
 
   const partners = useMemo(() => partnersFromReleases(releases), [releases]);
 
+  /** Matrix rows: 17 strategic partners in fixed order, then Other GSPs if any unmapped partner exists */
+  const matrixPartners = useMemo(() => buildMatrixPartnerRows(releases), [releases]);
+
   const getRelease = useCallback(
     (partner, product) =>
       releases.find((r) => r.partner === partner && r.product === product) || null,
     [releases]
   );
 
-  const getPartnerReleases = useCallback(
-    (partner) => releases.filter((r) => r.partner === partner),
+  /** Cell release for matrix row (strategic bucket or Other aggregate). */
+  const getMatrixRelease = useCallback(
+    (rowKey, product) => {
+      if (rowKey === OTHER_MATRIX_BUCKET) {
+        const candidates = releases.filter(
+          (r) => r.product === product && matrixPartnerBucket(r.partner) == null
+        );
+        return pickRepresentativeRelease(candidates);
+      }
+      const candidates = releases.filter(
+        (r) => r.product === product && matrixPartnerBucket(r.partner) === rowKey
+      );
+      return pickRepresentativeRelease(candidates);
+    },
     [releases]
   );
+
+  const getPartnerReleases = useCallback((partner) => {
+    if (partner === OTHER_MATRIX_BUCKET) {
+      return releases.filter((r) => matrixPartnerBucket(r.partner) == null);
+    }
+    return releases.filter((r) => matrixPartnerBucket(r.partner) === partner);
+  }, [releases]);
 
   const getSummary = useCallback(() => computeSummary(releases), [releases]);
 
@@ -174,6 +209,7 @@ export function DataProvider({ children }) {
       setDateRange,
       isFiltered,
       partners,
+      matrixPartners,
       productAreaGroups: PRODUCT_AREA_GROUPS,
       matrixProductOrder: MATRIX_PRODUCT_ORDER,
       loading,
@@ -181,6 +217,7 @@ export function DataProvider({ children }) {
       loadError,
       refresh: load,
       getRelease,
+      getMatrixRelease,
       getPartnerReleases,
       getSummary,
       getExceptions,
@@ -192,11 +229,13 @@ export function DataProvider({ children }) {
       setDateRange,
       isFiltered,
       partners,
+      matrixPartners,
       loading,
       dataStatus,
       loadError,
       load,
       getRelease,
+      getMatrixRelease,
       getPartnerReleases,
       getSummary,
       getExceptions,

@@ -36,7 +36,7 @@ function ChangeDirection({ from, to }) {
 function StageBadge({ stage }) {
   const s = STAGES[stage] || STAGES['N/A'];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${s.badge}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${s.badge}`}>
       {s.label}
     </span>
   );
@@ -48,40 +48,40 @@ function ChangeItem({ item, onSelectPartner }) {
 
   return (
     <div
-      className={`rounded-2xl p-4 space-y-2 shadow-sm ring-1 ring-slate-200/50 ${
+      className={`rounded-2xl p-4 space-y-2 shadow-sm ring-2 ${
         isBlock
-          ? 'bg-white border-l-[3px] border-l-red-400'
+          ? 'bg-white dark:bg-slate-900 border-l-[4px] border-l-red-500 dark:border-l-red-400 ring-red-200/80 dark:ring-red-900/50'
           : isUpgrade
-            ? 'bg-white border-l-[3px] border-l-emerald-400'
-            : 'bg-white border-l-[3px] border-l-slate-200'
+            ? 'bg-white dark:bg-slate-900 border-l-[4px] border-l-emerald-500 dark:border-l-emerald-400 ring-slate-200/50 dark:ring-slate-600'
+            : 'bg-white dark:bg-slate-900 border-l-[4px] border-l-slate-200 dark:border-l-slate-600 ring-slate-200/50 dark:ring-slate-600'
       }`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
         <button
           type="button"
-          className="font-semibold text-sm text-slate-900 hover:text-rc-blue text-left w-fit transition-colors"
+          className="font-bold text-base text-slate-900 dark:text-white hover:text-rc-blue dark:hover:text-sky-400 text-left w-fit transition-colors"
           onClick={() => onSelectPartner(item.partner)}
         >
           {item.partner}
         </button>
-        <span className="hidden sm:inline text-slate-300">·</span>
-        <span className="text-xs font-medium text-slate-600">{item.product}</span>
+        <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
+        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{item.product}</span>
         <div className="flex items-center gap-1.5 flex-wrap sm:ml-1">
           <StageBadge stage={item.from} />
           <ChangeDirection from={item.from} to={item.to} />
           <StageBadge stage={item.to} />
         </div>
-        <span className="sm:ml-auto text-[11px] text-slate-400 flex items-center gap-1">
-          <Clock size={11} strokeWidth={1.75} />
+        <span className="sm:ml-auto text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+          <Clock size={13} strokeWidth={2} />
           {item.date}
         </span>
       </div>
 
-      <p className="text-[13px] text-slate-600 leading-relaxed">{item.note}</p>
+      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{item.note}</p>
 
-      <div className="text-[11px] text-slate-400">
-        <span className="text-slate-500">Updated by</span>{' '}
-        <span className="font-medium text-slate-700">{item.author}</span>
+      <div className="text-sm text-slate-500 dark:text-slate-400">
+        <span className="text-slate-500 dark:text-slate-500">Updated by</span>{' '}
+        <span className="font-semibold text-slate-800 dark:text-slate-100">{item.author}</span>
       </div>
     </div>
   );
@@ -142,21 +142,21 @@ export default function ChangelogFeed({ onSelectPartner }) {
   );
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="px-5 py-4 flex-shrink-0 border-b border-slate-100/80">
-        <h2 className="text-base font-semibold text-slate-900 flex flex-wrap items-center gap-2 tracking-tight">
-          <Clock size={17} className="text-sky-500 shrink-0" strokeWidth={1.75} />
+    <div className="flex flex-col h-full min-h-0 text-base">
+      <div className="px-5 py-4 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-700/80">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2 tracking-tight">
+          <Clock size={19} className="text-sky-500 dark:text-sky-400 shrink-0" strokeWidth={2} />
           Changelog
-          <span className="ml-auto text-xs font-medium text-slate-400 tabular-nums">
+          <span className="ml-auto text-sm font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
             {loading ? '…' : `${items.length} entries`}
           </span>
         </h2>
-        <div className="flex flex-wrap gap-3 mt-2 text-[11px]">
-          <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
-            <TrendingUp size={12} strokeWidth={1.75} /> {upgrades.length} promotions
+        <div className="flex flex-wrap gap-3 mt-2 text-sm">
+          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-bold">
+            <TrendingUp size={14} strokeWidth={2} /> {upgrades.length} promotions
           </span>
-          <span className="inline-flex items-center gap-1 text-red-600 font-medium">
-            <TrendingDown size={12} strokeWidth={1.75} /> {downgrades.length} blocks / regressions
+          <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
+            <TrendingDown size={14} strokeWidth={2} /> {downgrades.length} blocks / regressions
           </span>
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function ChangelogFeed({ onSelectPartner }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             disabled={loading || !!error}
-            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-white ring-1 ring-slate-200/80 focus:outline-none focus:ring-2 focus:ring-sky-200/80 placeholder:text-slate-400 disabled:opacity-50"
+            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 ring-1 ring-slate-200/80 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-200/80 dark:focus:ring-sky-600 placeholder:text-slate-400 disabled:opacity-50"
           />
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function ChangelogFeed({ onSelectPartner }) {
           ))}
       </div>
 
-      <div className="px-4 sm:px-5 py-2.5 bg-white/60 backdrop-blur-sm border-t border-slate-100 text-[11px] text-slate-400 flex-shrink-0">
+      <div className="px-4 sm:px-5 py-2.5 bg-white/60 dark:bg-slate-900/70 backdrop-blur-sm border-t border-slate-100 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400 flex-shrink-0">
         {!loading && !error && (
           <span>
             {filtered.length} of {items.length} shown

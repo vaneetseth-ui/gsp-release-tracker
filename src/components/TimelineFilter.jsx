@@ -41,16 +41,16 @@ export default function TimelineFilter() {
   const clear = () => setDateRange({ from: null, to: null });
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-2.5 border-b border-slate-100/90 bg-white/70 backdrop-blur-sm flex-shrink-0">
-      <Calendar size={14} className="text-slate-400 shrink-0" strokeWidth={1.75} />
+    <div className="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-2.5 border-b border-slate-100/90 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm flex-shrink-0">
+      <Calendar size={16} className="text-slate-400 dark:text-slate-500 shrink-0" strokeWidth={2} />
 
       <button
         type="button"
         onClick={clear}
-        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+        className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
           !isFiltered
-            ? 'bg-slate-900 text-white shadow-sm'
-            : 'bg-white text-slate-600 ring-1 ring-slate-200/80 hover:ring-slate-300'
+            ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white shadow-sm'
+            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200/80 dark:ring-slate-600 hover:ring-slate-300'
         }`}
       >
         All
@@ -61,32 +61,32 @@ export default function TimelineFilter() {
           key={y}
           type="button"
           onClick={() => selectYear(y)}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
             activeYear === y
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-600 ring-1 ring-slate-200/80 hover:ring-slate-300'
+              ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200/80 dark:ring-slate-600 hover:ring-slate-300'
           }`}
         >
           {y}
         </button>
       ))}
 
-      <span className="hidden sm:block w-px h-5 bg-slate-200 mx-0.5" aria-hidden />
+      <span className="hidden sm:block w-px h-5 bg-slate-200 dark:bg-slate-600 mx-0.5" aria-hidden />
 
-      <div className="flex flex-wrap items-center gap-2 text-xs w-full sm:w-auto">
-        <span className="text-slate-400 font-medium">From</span>
+      <div className="flex flex-wrap items-center gap-2 text-sm w-full sm:w-auto">
+        <span className="text-slate-500 dark:text-slate-400 font-semibold">From</span>
         <input
           type="date"
           value={dateRange.from || ''}
           onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value || null }))}
-          className="px-2 py-1.5 rounded-xl text-xs text-slate-700 bg-white ring-1 ring-slate-200/80 focus:outline-none focus:ring-2 focus:ring-sky-200/80 min-w-0 flex-1 sm:flex-none sm:w-[128px]"
+          className="px-2 py-2 rounded-xl text-sm text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 ring-1 ring-slate-200/80 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:focus:ring-sky-600 min-w-0 flex-1 sm:flex-none sm:w-[140px]"
         />
-        <span className="text-slate-400 font-medium">To</span>
+        <span className="text-slate-500 dark:text-slate-400 font-semibold">To</span>
         <input
           type="date"
           value={dateRange.to || ''}
           onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value || null }))}
-          className="px-2 py-1.5 rounded-xl text-xs text-slate-700 bg-white ring-1 ring-slate-200/80 focus:outline-none focus:ring-2 focus:ring-sky-200/80 min-w-0 flex-1 sm:flex-none sm:w-[128px]"
+          className="px-2 py-2 rounded-xl text-sm text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 ring-1 ring-slate-200/80 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:focus:ring-sky-600 min-w-0 flex-1 sm:flex-none sm:w-[140px]"
         />
       </div>
 
@@ -94,17 +94,17 @@ export default function TimelineFilter() {
         <button
           type="button"
           onClick={clear}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-slate-500 hover:bg-slate-100 transition-colors"
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-full text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           title="Clear filter"
         >
-          <X size={12} strokeWidth={1.75} /> Clear
+          <X size={14} strokeWidth={2} /> Clear
         </button>
       )}
 
-      <span className="w-full sm:w-auto sm:ml-auto text-[11px] text-slate-400 text-right sm:text-left">
+      <span className="w-full sm:w-auto sm:ml-auto text-sm text-slate-500 dark:text-slate-400 text-right sm:text-left">
         {isFiltered ? (
           <>
-            <span className="font-semibold text-slate-600 tabular-nums">{releases.length}</span>
+            <span className="font-bold text-slate-700 dark:text-slate-200 tabular-nums">{releases.length}</span>
             <span> of </span>
             <span className="tabular-nums">{allReleases.length}</span>
             <span> releases</span>

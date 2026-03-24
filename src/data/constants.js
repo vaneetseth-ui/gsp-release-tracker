@@ -70,11 +70,15 @@ export function normalizeProductArea(stored, product) {
 
 export const PRODUCT_AREA_BADGE_CLASS = {
   'Intelligent Voice & AI':
-    'bg-violet-50 text-violet-800 ring-1 ring-violet-100/90',
-  'Contact Center': 'bg-sky-50 text-sky-800 ring-1 ring-sky-100/90',
-  'Unified Communications': 'bg-teal-50 text-teal-800 ring-1 ring-teal-100/90',
-  'Strategic Programs': 'bg-amber-50 text-amber-900 ring-1 ring-amber-100/90',
-  Other: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200/70',
+    'bg-violet-50 text-violet-800 ring-1 ring-violet-100/90 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800/50',
+  'Contact Center':
+    'bg-sky-50 text-sky-800 ring-1 ring-sky-100/90 dark:bg-sky-950/45 dark:text-sky-100 dark:ring-sky-800/45',
+  'Unified Communications':
+    'bg-teal-50 text-teal-800 ring-1 ring-teal-100/90 dark:bg-teal-950/45 dark:text-teal-100 dark:ring-teal-800/45',
+  'Strategic Programs':
+    'bg-amber-50 text-amber-900 ring-1 ring-amber-100/90 dark:bg-amber-950/45 dark:text-amber-100 dark:ring-amber-800/45',
+  Other:
+    'bg-slate-50 text-slate-600 ring-1 ring-slate-200/70 dark:bg-slate-800/60 dark:text-slate-300 dark:ring-slate-600/50',
 };
 
 export function productAreaBadgeClass(area) {
