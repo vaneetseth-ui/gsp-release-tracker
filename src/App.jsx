@@ -4,8 +4,7 @@
  * Slide-in PartnerView panel on partner/cell selection
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
-import { api } from './api.js';
+import { Grid3X3, AlertCircle, Clock, MessageSquare, ChevronRight, RefreshCw, CheckCircle, WifiOff } from 'lucide-react';
 import MatrixView      from './components/MatrixView.jsx';
 import PartnerView     from './components/PartnerView.jsx';
 import ExceptionPanel  from './components/ExceptionPanel.jsx';
@@ -20,15 +19,13 @@ const TABS = [
   { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language queries' },
 ];
 
-function Header({ activeTab, onTabChange, onRefresh, syncState }) {
+function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
   const summary = getSummary();
 
   return (
     <header className="bg-rc-navy text-white flex-shrink-0 shadow-lg">
-      {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          {/* RC logo placeholder */}
           <div className="w-7 h-7 rounded-md bg-rc-orange flex items-center justify-center text-white text-xs font-black">RC</div>
           <div>
             <h1 className="text-sm font-bold tracking-wide">GSP Release Tracker</h1>
@@ -37,7 +34,6 @@ function Header({ activeTab, onTabChange, onRefresh, syncState }) {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Quick stats */}
           <div className="hidden sm:flex gap-4 text-xs text-blue-200">
             <span><span className="text-white font-bold">{summary.byStage.GA}</span> GA</span>
             <span><span className="text-white font-bold">{summary.byStage.Beta}</span> Beta</span>
@@ -47,23 +43,26 @@ function Header({ activeTab, onTabChange, onRefresh, syncState }) {
             )}
           </div>
 
-          <button
-            onClick={onRefresh}
-            disabled={syncState === 'syncing'}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 transition-colors text-xs font-medium"
-          >
-            {syncState === 'syncing' && <RefreshCw size={13} className="animate-spin" />}
-            {syncState === 'success' && <CheckCircle2 size={13} className="text-emerald-300" />}
-            {syncState === 'error'   && <XCircle size={13} className="text-red-300" />}
-            {(!syncState || syncState === 'idle') && <RefreshCw size={13} />}
-            <span className="hidden sm:inline">
-              {syncState === 'syncing' ? 'Syncing…' : syncState === 'success' ? 'Synced!' : syncState === 'error' ? 'Failed' : 'Sync Jira'}
-            </span>
-          </button>
+          <div className="flex items-center gap-2">
+            {syncStatus.lastSync && (
+              <span className="hidden md:flex items-center gap-1 text-xs text-blue-200">
+                <CheckCircle size={11} className="text-green-400" />
+                {syncStatus.lastSync}
+              </span>
+            )}
+            <button
+              onClick={onRefresh}
+              title="Data syncs automatically every hour. Click to refresh dashboard."
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
+              disabled={syncStatus.checking}
+            >
+              <RefreshCw size={13} className={syncStatus.checking ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">{syncStatus.checking ? 'Checking…' : 'Refresh'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Tab bar */}
       <div className="flex px-4 gap-1 pt-1">
         {TABS.map(tab => {
           const Icon = tab.icon;
@@ -93,11 +92,36 @@ function Header({ activeTab, onTabChange, onRefresh, syncState }) {
   );
 }
 
+function formatSyncTime(isoString) {
+  if (!isoString) return null;
+  try {
+    const d = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1)   return 'Synced just now';
+    if (diffMins < 60)  return `Synced ${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24)   return `Synced ${diffHrs}h ago`;
+    return `Synced ${d.toLocaleDateString()}`;
+  } catch { return null; }
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('matrix');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [syncState, setSyncState] = useState('idle'); // idle | syncing | success | error
+  const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(r => r.json())
+      .then(data => {
+        const t = data.lastSync || data.last_sync || data.syncedAt;
+        setSyncStatus({ checking: false, lastSync: formatSyncTime(t) });
+      })
+      .catch(() => setSyncStatus({ checking: false, lastSync: null }));
+  }, [refreshKey]);
 
   const handleSelectPartner = useCallback((partner) => {
     setSelectedPartner(partner);
@@ -107,18 +131,9 @@ export default function App() {
     setSelectedPartner(release.partner);
   }, []);
 
-  const handleRefresh = useCallback(async () => {
-    setSyncState('syncing');
-    try {
-      await api.sync();
-      setSyncState('success');
-      setRefreshKey(k => k + 1);
-      setTimeout(() => setSyncState('idle'), 3000);
-    } catch (e) {
-      console.error('Sync failed:', e.message);
-      setSyncState('error');
-      setTimeout(() => setSyncState('idle'), 4000);
-    }
+  const handleRefresh = useCallback(() => {
+    setSyncStatus(s => ({ ...s, checking: true }));
+    setRefreshKey(k => k + 1);
   }, []);
 
   const panelOpen = !!selectedPartner;
@@ -129,12 +144,10 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onRefresh={handleRefresh}
-        syncState={syncState}
+        syncStatus={syncStatus}
       />
 
-      {/* Main content area + optional side panel */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Main pane */}
         <main className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 ${panelOpen ? 'lg:mr-0' : ''}`}>
           {activeTab === 'matrix' && (
             <MatrixView
@@ -154,7 +167,6 @@ export default function App() {
           )}
         </main>
 
-        {/* Partner side panel */}
         <div
           className={`
             flex-shrink-0 overflow-hidden bg-white border-l border-slate-200 shadow-xl
@@ -171,14 +183,13 @@ export default function App() {
         </div>
       </div>
 
-      {/* Status bar */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-1.5 bg-white border-t border-slate-200 text-xs text-slate-400">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Mock data mode
+            Live mode
           </span>
-          <span>Sources: Jira · Monday.com · Confluence · Sheets · PostgreSQL</span>
+          <span>Sources: Jira · PostgreSQL</span>
         </div>
         <span>
           {panelOpen && (
