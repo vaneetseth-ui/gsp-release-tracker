@@ -1,6 +1,6 @@
 /**
  * Glip / RingCentral team messaging webhook (v1.2).
- * Set GLIP_WEBHOOK_URL to an incoming webhook; otherwise returns graceful error.
+ * Set GLIP_WEBHOOK_URL (env / `.env` via dotenv, or host config vars) to the RingCentral incoming webhook.
  */
 export async function postGlipMessage(body) {
   const url = process.env.GLIP_WEBHOOK_URL?.trim();

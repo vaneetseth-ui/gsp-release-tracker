@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 /**
  * server/index.js — GSP Release Tracker API Server
  * Serves both the React build (static) and REST API endpoints
