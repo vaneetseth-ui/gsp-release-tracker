@@ -6,7 +6,8 @@ import { Calendar, X } from 'lucide-react';
 import { useData } from '../context/DataContext.jsx';
 
 function yearFromRelease(r) {
-  const d = r.last_updated || r.target_date || r.actual_date;
+  const d =
+    r.last_updated || r.gsp_launch_date || r.product_readiness_date || r.target_date || r.actual_date;
   if (!d) return null;
   return String(d).slice(0, 4);
 }

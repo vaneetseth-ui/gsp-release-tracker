@@ -9,7 +9,7 @@ import React, {
 import { STAGES } from '../data/stages.js';
 import {
   MATRIX_PRODUCT_ORDER,
-  PRODUCT_AREA_GROUPS,
+  PRODUCT_BUCKET_GROUPS,
   normalizeProductArea,
 } from '../data/constants.js';
 import {
@@ -26,12 +26,21 @@ function flag(v) {
   return v === 1 || v === true || v === '1';
 }
 
+const MS_PER_DAY = 86400000;
+
+function isCommentStale(commentUpdatedAt) {
+  if (!commentUpdatedAt) return false;
+  const t = new Date(commentUpdatedAt).getTime();
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t > 7 * MS_PER_DAY;
+}
+
 /**
  * API rows are snake_case; UI expects camelCase for flags + jira alias.
  */
 export function normalizeReleaseRow(r) {
   const product = r.product;
-  const product_area = normalizeProductArea(r.product_area, product);
+  const product_area = normalizeProductArea(r.product_area, product, r.product_track);
   const blocked = flag(r.blocked);
   const redAccount = flag(r.red_account ?? r.redAccount);
   const missingPM = flag(r.missing_pm ?? r.missingPM);
@@ -42,12 +51,17 @@ export function normalizeReleaseRow(r) {
   const jiraLinks = buildJiraLinks(jiraTextForLinkParsing(r));
   const mondayUrl = resolveMondayUrl(r);
   const jira_number = r.jira_number ?? r.jira_key ?? jiraLinks[0]?.key ?? null;
+  const includeInMatrix = r.include_in_matrix !== 0 && r.include_in_matrix !== false;
+  const isUnmanagedJira = flag(r.is_unmanaged_jira);
+  const legacySourced = flag(r.legacy_sourced);
+  const priorityNumber = r.priority_number != null ? Number(r.priority_number) : null;
 
   return {
     ...r,
     product,
     product_area,
     productArea: product_area,
+    product_track: r.product_track ?? null,
     jira: jiraRaw,
     jira_number,
     jiraLinks,
@@ -59,11 +73,36 @@ export function normalizeReleaseRow(r) {
     daysInEAP,
     daysOverdue,
     arrAtRisk,
+    release_key: r.release_key ?? null,
+    pmo_status: r.pmo_status ?? null,
+    jira_status: r.jira_status ?? null,
+    project_title: r.project_title ?? null,
+    impact_summary: r.impact_summary ?? null,
+    desc_raw: r.desc_raw ?? null,
+    market_type: r.market_type ?? null,
+    priority_number: priorityNumber,
+    product_readiness_date: r.product_readiness_date ?? null,
+    gsp_launch_date: r.gsp_launch_date ?? null,
+    schedule_url: r.schedule_url ?? null,
+    tracker_group: r.tracker_group ?? null,
+    monday_comment: r.monday_comment ?? null,
+    comment_updated_at: r.comment_updated_at ?? null,
+    commentStale: isCommentStale(r.comment_updated_at),
+    data_provenance: r.data_provenance ?? null,
+    includeInMatrix: includeInMatrix,
+    isUnmanagedJira,
+    legacy_sourced: legacySourced,
+    legacy_planning_date: r.legacy_planning_date ?? null,
+    legacy_golive_date: r.legacy_golive_date ?? null,
+    salesforce_account_id: r.salesforce_account_id ?? null,
+    bug_report_count: r.bug_report_count != null ? Number(r.bug_report_count) : null,
+    bug_reports_url: r.bug_reports_url ?? null,
   };
 }
 
 function getReleaseDateForFilter(r) {
-  const raw = r.last_updated || r.target_date || r.actual_date || null;
+  const raw =
+    r.last_updated || r.gsp_launch_date || r.target_date || r.actual_date || r.product_readiness_date || null;
   if (!raw) return null;
   return String(raw).slice(0, 10);
 }
@@ -88,14 +127,74 @@ function computeSummary(releases) {
   active.forEach((r) => {
     if (counts[r.stage] !== undefined) counts[r.stage]++;
   });
+  const pmoCounts = {};
+  active.forEach((r) => {
+    const ps = r.pmo_status || r.stage || 'Unknown';
+    pmoCounts[ps] = (pmoCounts[ps] || 0) + 1;
+  });
   return {
     total: active.length,
     byStage: counts,
-    blocked: active.filter((r) => r.blocked).length,
-    redAccounts: active.filter((r) => r.redAccount).length,
-    missingPM: active.filter((r) => r.missingPM).length,
-    overdue: active.filter((r) => (r.daysOverdue || 0) > 0).length,
+    byPmoStatus: pmoCounts,
+    withSchedule: active.filter((r) => r.gsp_launch_date || r.product_readiness_date).length,
   };
+}
+
+function gapField(release, field, severity, label, present) {
+  if (present) return null;
+  return { field, severity, label, message: `${label} — needs PMO/Jira update` };
+}
+
+/**
+ * Data-quality gaps (v1.2 Exceptions tab). Unmanaged Jira rows listed separately.
+ */
+export function computeGapsForRelease(r) {
+  const gaps = [];
+
+  if (r.isUnmanagedJira) {
+    gaps.push({
+      field: 'monday_item',
+      severity: 'High',
+      label: 'Not in Monday',
+      message: 'Jira GSP ticket has no matching Monday item — add to GSP Priorities or ignore',
+    });
+    return gaps;
+  }
+
+  const push = (field, severity, label, ok) => {
+    const x = gapField(r, field, severity, label, ok);
+    if (x) gaps.push(x);
+  };
+  push('partner', 'Critical', 'Partner', !!(r.partner && String(r.partner).trim()));
+  push(
+    'status',
+    'Critical',
+    'PMO status',
+    !!((r.pmo_status && String(r.pmo_status).trim()) || (r.stage && String(r.stage).trim()))
+  );
+  push('product_track', 'High', 'Product Track', !!(r.product_track && String(r.product_track).trim()));
+  push('se_lead', 'Medium', 'SE Lead', !!(r.se_lead && String(r.se_lead).trim()));
+  push('pm', 'Medium', 'Product Manager', !!(r.pm && String(r.pm).trim()));
+  const hasSchedule = !!(r.product_readiness_date || r.gsp_launch_date || r.target_date);
+  push('schedule', 'Medium', 'Schedule / milestone dates', hasSchedule);
+  push('jira_number', 'Low', 'Jira Number', !!(r.jira_number && String(r.jira_number).trim()));
+  push('market_type', 'Low', 'Market Type', !!(r.market_type && String(r.market_type).trim()));
+
+  return gaps;
+}
+
+function computeAllGaps(releases) {
+  const out = [];
+  for (const r of releases) {
+    const gaps = computeGapsForRelease(r);
+    if (gaps.length) out.push({ release: r, gaps });
+  }
+  out.sort((a, b) => {
+    const rank = (g) =>
+      g.gaps.some((x) => x.severity === 'Critical') ? 0 : g.gaps.some((x) => x.severity === 'High') ? 1 : 2;
+    return rank(a) - rank(b) || String(a.release.partner).localeCompare(String(b.release.partner));
+  });
+  return out;
 }
 
 export function DataProvider({ children }) {
@@ -150,67 +249,61 @@ export function DataProvider({ children }) {
     });
   }, [allReleases, dateRange]);
 
-  const isFiltered = !!(dateRange.from || dateRange.to);
-
-  const partners = useMemo(() => partnersFromReleases(releases), [releases]);
-
-  /** Matrix rows: 17 strategic partners in fixed order, then Other GSPs if any unmapped partner exists */
-  const matrixPartners = useMemo(() => buildMatrixPartnerRows(releases), [releases]);
-
-  const getRelease = useCallback(
-    (partner, product) =>
-      releases.find((r) => r.partner === partner && r.product === product) || null,
+  const matrixReleases = useMemo(
+    () => releases.filter((r) => r.includeInMatrix && !r.isUnmanagedJira),
     [releases]
   );
 
-  /** Cell release for matrix row (strategic bucket or Other aggregate). */
+  const isFiltered = !!(dateRange.from || dateRange.to);
+
+  const partners = useMemo(() => partnersFromReleases(matrixReleases), [matrixReleases]);
+
+  const matrixPartners = useMemo(() => buildMatrixPartnerRows(matrixReleases), [matrixReleases]);
+
+  const getRelease = useCallback(
+    (partner, product) =>
+      matrixReleases.find((r) => r.partner === partner && r.product === product) || null,
+    [matrixReleases]
+  );
+
   const getMatrixRelease = useCallback(
     (rowKey, product) => {
       if (rowKey === OTHER_MATRIX_BUCKET) {
-        const candidates = releases.filter(
+        const candidates = matrixReleases.filter(
           (r) => r.product === product && matrixPartnerBucket(r.partner) == null
         );
         return pickRepresentativeRelease(candidates);
       }
-      const candidates = releases.filter(
+      const candidates = matrixReleases.filter(
         (r) => r.product === product && matrixPartnerBucket(r.partner) === rowKey
       );
       return pickRepresentativeRelease(candidates);
     },
-    [releases]
+    [matrixReleases]
   );
 
   const getPartnerReleases = useCallback((partner) => {
     if (partner === OTHER_MATRIX_BUCKET) {
-      return releases.filter((r) => matrixPartnerBucket(r.partner) == null);
+      return matrixReleases.filter((r) => matrixPartnerBucket(r.partner) == null);
     }
-    return releases.filter((r) => matrixPartnerBucket(r.partner) === partner);
-  }, [releases]);
+    return matrixReleases.filter((r) => matrixPartnerBucket(r.partner) === partner);
+  }, [matrixReleases]);
 
-  const getSummary = useCallback(() => computeSummary(releases), [releases]);
+  const getSummary = useCallback(() => computeSummary(matrixReleases), [matrixReleases]);
 
-  const getExceptions = useCallback(
-    () =>
-      releases.filter(
-        (r) =>
-          r.blocked ||
-          r.redAccount ||
-          r.missingPM ||
-          (r.daysInEAP && r.daysInEAP > 90)
-      ),
-    [releases]
-  );
+  const getExceptions = useCallback(() => computeAllGaps(releases), [releases]);
 
   const value = useMemo(
     () => ({
       releases,
+      matrixReleases,
       allReleases,
       dateRange,
       setDateRange,
       isFiltered,
       partners,
       matrixPartners,
-      productAreaGroups: PRODUCT_AREA_GROUPS,
+      productAreaGroups: PRODUCT_BUCKET_GROUPS,
       matrixProductOrder: MATRIX_PRODUCT_ORDER,
       loading,
       dataStatus,
@@ -221,9 +314,11 @@ export function DataProvider({ children }) {
       getPartnerReleases,
       getSummary,
       getExceptions,
+      computeGapsForRelease,
     }),
     [
       releases,
+      matrixReleases,
       allReleases,
       dateRange,
       setDateRange,
@@ -239,6 +334,7 @@ export function DataProvider({ children }) {
       getPartnerReleases,
       getSummary,
       getExceptions,
+      computeGapsForRelease,
     ]
   );
 

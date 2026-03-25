@@ -7,14 +7,15 @@ import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw } from 'lu
 import { api } from '../api.js';
 import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
+import GlipNotifyButton from './GlipNotifyButton.jsx';
 
 const SUGGESTIONS = [
   "What is MCM's Nova IVA status?",
-  'Show me all blocked releases',
-  'Which partners are in EAP for RingCX?',
-  'Brief me on what needs escalation',
-  'List all red accounts',
-  'Who has no PM assigned?',
+  'Which GSP Jira projects are not in Monday?',
+  'How many RingCX projects are PMO-managed with schedules?',
+  'Top 5 critical AT&T projects?',
+  'Show launch dates for all projects by row',
+  'Is Talos live on RCX?',
 ];
 
 const STAGE_COLORS = {
@@ -35,28 +36,83 @@ const SEV_COLORS = {
 // ── Result renderers ──────────────────────────────────────────────────────────
 
 function Tier1Result({ result }) {
-  if (result.intent === 'direct_lookup') {
+  if (result.intent === 'direct_lookup' || result.intent === 'product_status') {
     const r = result.record;
-    if (!r) return <p className="text-slate-500 text-sm">No record found for that partner/product combination.</p>;
+    if (!r) {
+      return (
+        <p className="text-slate-600 text-sm bg-amber-50/80 ring-1 ring-amber-100 rounded-xl px-4 py-3">
+          {result.message || 'Not on record — no matching row in cache. Try the Exceptions tab for data gaps.'}
+        </p>
+      );
+    }
     const jiraLinks = buildJiraLinks(jiraTextForLinkParsing(r));
     const mondayUrl = resolveMondayUrl(r);
     const showRawJira = !jiraLinks.length && (r.jira_number || r.jira);
+    const pmo = r.pmo_status || r.stage;
+    const showJiraStatus = r.jira_status && r.jira_status !== pmo;
     return (
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100">
           <div>
-            <p className="font-semibold text-slate-900">{r.partner}</p>
-            <p className="text-xs text-slate-500">{r.product}</p>
+            <p className="font-bold text-slate-900">{r.project_title || r.notes || r.product}</p>
+            <p className="text-xs text-slate-500">{r.partner} · {r.product}</p>
+            {result.confidence && (
+              <p className="text-[10px] text-slate-400 mt-1">Confidence: {result.confidence} (cache)</p>
+            )}
           </div>
           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
-            {r.stage}
+            {pmo}
           </span>
         </div>
+        {r.impact_summary && (
+          <p className="px-4 py-2 text-sm text-slate-600 border-b border-slate-100">{r.impact_summary}</p>
+        )}
         <div className="grid grid-cols-2 gap-3 p-4 text-sm">
-          {r.target_date  && <div><p className="text-xs text-slate-400 mb-0.5">Target Date</p><p className="font-medium">{r.target_date}</p></div>}
-          {r.actual_date  && <div><p className="text-xs text-slate-400 mb-0.5">Actual Date</p><p className="font-medium">{r.actual_date}</p></div>}
-          {r.pm           && <div><p className="text-xs text-slate-400 mb-0.5">PM</p><p className="font-medium">{r.pm}</p></div>}
-          {r.se_lead      && <div><p className="text-xs text-slate-400 mb-0.5">SE Lead</p><p className="font-medium">{r.se_lead}</p></div>}
+          {r.product_readiness_date && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">Product Readiness</p>
+              <p className="font-medium">{r.product_readiness_date}</p>
+            </div>
+          )}
+          {r.gsp_launch_date && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">GSP Launch</p>
+              <p className="font-medium">{r.gsp_launch_date}</p>
+            </div>
+          )}
+          {!r.product_readiness_date && !r.gsp_launch_date && (
+            <div className="col-span-2 text-xs text-slate-500">Milestone dates: not scheduled (on record)</div>
+          )}
+          {r.target_date && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">Target Date</p>
+              <p className="font-medium">{r.target_date}</p>
+            </div>
+          )}
+          {r.actual_date && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">Actual Date</p>
+              <p className="font-medium">{r.actual_date}</p>
+            </div>
+          )}
+          {r.pm && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">PM</p>
+              <p className="font-medium">{r.pm}</p>
+            </div>
+          )}
+          {r.se_lead && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">SE Lead</p>
+              <p className="font-medium">{r.se_lead}</p>
+            </div>
+          )}
+          {showJiraStatus && (
+            <div className="col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Jira status</p>
+              <p className="font-medium">{r.jira_status}</p>
+            </div>
+          )}
           {(jiraLinks.length > 0 || mondayUrl || showRawJira) && (
             <div className="col-span-2">
               <p className="text-xs text-slate-400 mb-0.5">Jira / Monday</p>
@@ -68,16 +124,21 @@ function Tier1Result({ result }) {
               </div>
             </div>
           )}
-          {r.days_in_eap  && <div><p className="text-xs text-slate-400 mb-0.5">Days in EAP</p><p className={`font-medium ${r.days_in_eap > 90 ? 'text-red-600 font-bold' : ''}`}>{r.days_in_eap}d</p></div>}
         </div>
-        {r.notes && <div className="px-4 pb-4 text-xs text-slate-500 italic border-t border-slate-100 pt-3">{r.notes}</div>}
-        {(r.blocked || r.red_account || r.missing_pm) && (
-          <div className="px-4 pb-4 flex gap-2 flex-wrap">
-            {r.blocked      && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">⛔ Blocked</span>}
-            {r.red_account  && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">🔴 Red Account</span>}
-            {r.missing_pm   && <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">⚠ No PM</span>}
-          </div>
-        )}
+        <div className="px-4 pb-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
+          <GlipNotifyButton
+            variant="ask"
+            context={{
+              question: result.query,
+              answer_summary: r.project_title || r.notes,
+              partner: r.partner,
+              project_title: r.project_title,
+              pmo_status: r.pmo_status,
+              jira_number: r.jira_number,
+              priority_number: r.priority_number,
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -91,12 +152,9 @@ function Tier1Result({ result }) {
         {rows.filter(r => r.stage !== 'N/A').map((r, i) => (
           <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50">
             <span className="font-medium text-slate-800">{r.product}</span>
-            <div className="flex items-center gap-2">
-              {r.blocked     && <span className="text-xs text-red-500">⛔</span>}
-              {r.red_account && <span className="text-xs text-red-500">🔴</span>}
-              {r.missing_pm  && <span className="text-xs text-amber-500">⚠</span>}
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>{r.stage}</span>
-            </div>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
+              {r.pmo_status || r.stage}
+            </span>
           </div>
         ))}
       </div>
@@ -108,18 +166,29 @@ function Tier2Result({ result }) {
   const rows = (result.rows || []).filter(r => r.stage !== 'N/A');
   const label = result.matchedProduct
     ? `${result.matchedProduct}${result.matchedStage ? ` · ${result.matchedStage}` : ''}`
-    : result.matchedStage || 'All Active';
+    : result.matchedStage || result.intent || 'All Active';
   return (
     <div className="space-y-2">
+      {result.message && <p className="text-sm text-slate-600">{result.message}</p>}
+      {result.confidence && (
+        <p className="text-[10px] text-slate-400">Confidence: {result.confidence} · postgres cache</p>
+      )}
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{rows.length} results — {label}</p>
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100 max-h-80 overflow-y-auto">
         {rows.map((r, i) => (
-          <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50">
-            <div>
+          <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50 gap-2">
+            <div className="min-w-0">
               <span className="font-medium text-slate-800">{r.partner}</span>
               {!result.matchedProduct && <span className="ml-2 text-xs text-slate-400">{r.product}</span>}
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>{r.stage}</span>
+            {result.intent === 'date_list' && (
+              <span className="text-xs text-slate-500 truncate max-w-[40%]">
+                {r.gsp_launch_date || r.product_readiness_date || 'not scheduled'}
+              </span>
+            )}
+            <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
+              {r.pmo_status || r.stage}
+            </span>
           </div>
         ))}
       </div>
@@ -129,9 +198,18 @@ function Tier2Result({ result }) {
 
 function Tier3Result({ result }) {
   const rows = result.rows || [];
-  const label = { blocked:'Blocked', red:'Red Accounts', nopm:'No PM Assigned', eap:'Overdue EAP (>90d)', exceptions:'All Exceptions' }[result.intent] || 'Exceptions';
+  const label =
+    {
+      blocked: 'Blocked',
+      red: 'Red Accounts',
+      nopm: 'No PM Assigned',
+      eap: 'Overdue EAP (>90d)',
+      exceptions: 'All Exceptions',
+      jira_not_monday: 'Jira not in Monday',
+    }[result.intent] || 'Exceptions';
   return (
     <div className="space-y-2">
+      {result.message && <p className="text-sm text-slate-600">{result.message}</p>}
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{rows.length} {label}</p>
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100 max-h-80 overflow-y-auto">
         {rows.map((r, i) => {
@@ -142,14 +220,13 @@ function Tier3Result({ result }) {
             <div key={i} className="px-4 py-3 hover:bg-slate-50">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-slate-800 text-sm">{r.partner} · {r.product}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>{r.stage}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
+                  {r.pmo_status || r.stage}
+                </span>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {r.blocked     && <span className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded">Blocked {r.days_overdue}d</span>}
-                {r.red_account && <span className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded">Red Acct ${((r.arr_at_risk||0)/1000).toFixed(0)}K ARR</span>}
-                {r.missing_pm  && <span className="text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded">No PM</span>}
-                {r.days_in_eap > 90 && <span className="text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded">{r.days_in_eap}d in EAP</span>}
-              </div>
+              {r.is_unmanaged_jira ? (
+                <p className="text-xs text-amber-700">Not in Monday — unmanaged Jira</p>
+              ) : null}
               {(jl.length > 0 || mUrl || rawJira) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <JiraMondayLinks jiraLinks={jl} mondayUrl={mUrl} compact />
@@ -189,13 +266,14 @@ function Tier4Result({ result }) {
 }
 
 function ResultCard({ result }) {
-  const tierLabel = ['Unknown', 'Direct Lookup', 'Cross-Scan', 'Exception Filter', 'Escalation Brief'][result.tier] || '';
+  const tierLabel = ['Unknown', 'Lookup', 'List / scan', 'Gaps / unmanaged', 'Escalation Brief'][result.tier] || '';
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-slate-400">
         <span className="flex items-center gap-1.5">
           <span className={`w-1.5 h-1.5 rounded-full ${['bg-slate-300','bg-blue-400','bg-purple-400','bg-amber-400','bg-red-400'][result.tier]}`} />
-          Tier {result.tier} · {tierLabel}
+          {tierLabel}
+          {result.askType != null && <span className="text-slate-300">· Q{result.askType}</span>}
         </span>
         {result.sources && (
           <span>Sources: {result.sources.join(' · ')}</span>
@@ -203,7 +281,7 @@ function ResultCard({ result }) {
       </div>
 
       {result.tier === 0 && (
-        <p className="text-slate-500 text-sm bg-slate-50 rounded-lg px-4 py-3">{result.message}</p>
+        <p className="text-slate-600 text-sm bg-slate-50 rounded-lg px-4 py-3">{result.message}</p>
       )}
       {result.tier === 1 && <Tier1Result result={result} />}
       {result.tier === 2 && <Tier2Result result={result} />}

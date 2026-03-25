@@ -1,14 +1,14 @@
 /**
- * PartnerView — Slide-in side panel for partner deep-dive
- * Shows all releases for a partner + key contacts + exceptions
+ * PartnerView — v1.2 blended descriptive cards (Monday + Jira), SE/PM only, Glip notify
  */
 import React from 'react';
-import { X, User, Briefcase, HeartHandshake, AlertCircle, DollarSign, UserX, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { X, User, Briefcase, Calendar, CheckCircle2 } from 'lucide-react';
 import { STAGES } from '../data/stages.js';
 import { OTHER_MATRIX_BUCKET } from '../data/matrixPartners.js';
 import { useData } from '../context/DataContext.jsx';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
+import GlipNotifyButton from './GlipNotifyButton.jsx';
 
 function ContactBadge({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -21,105 +21,75 @@ function ContactBadge({ icon: Icon, label, value }) {
   );
 }
 
-function StageChip({ stage }) {
-  const s = STAGES[stage] || STAGES['N/A'];
-  return (
-    <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-bold ${s.badge}`}>
-      {s.label}
-    </span>
-  );
-}
-
-function ReleaseCard({ release }) {
+function ReleaseCard({ release, computeGapsForRelease }) {
   const isNA = release.stage === 'N/A';
   if (isNA) return null;
 
-  const hasAlert = release.blocked || release.redAccount || release.missingPM ||
-    (release.daysInEAP && release.daysInEAP > 90);
   const jl = release.jiraLinks || [];
   const hasToolLinks = jl.length > 0 || !!release.mondayUrl;
   const showRawJira = !jl.length && release.jira;
+  const title = release.project_title || release.notes || release.product;
+  const pmo = release.pmo_status || release.stage;
+  const stageStyle = STAGES[release.stage] || STAGES.Planned;
+  const showJiraStatus = release.jira_status && release.jira_status !== pmo;
+  const gaps = computeGapsForRelease(release).filter((g) => g.severity === 'Critical' || g.severity === 'High');
 
   return (
-    <div
-      className={`rounded-2xl p-4 space-y-3 transition-all ring-2 shadow-sm ${
-        release.blocked
-          ? 'bg-white dark:bg-slate-900 ring-red-300 dark:ring-red-700 border-l-[4px] border-l-red-500 dark:border-l-red-400'
-          : hasAlert
-            ? 'bg-white dark:bg-slate-900 ring-amber-300/90 dark:ring-amber-600/60 border-l-[4px] border-l-amber-500 dark:border-l-amber-400'
-            : 'bg-white dark:bg-slate-900 ring-slate-200/60 dark:ring-slate-600 border-l-[4px] border-l-transparent'
-      }`}
-    >
-      {/* Header row */}
+    <div className="rounded-2xl p-4 space-y-3 transition-all ring-1 ring-slate-200/70 dark:ring-slate-600 bg-white dark:bg-slate-900 shadow-sm">
       <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
+          <h3 className="font-bold text-base text-slate-900 dark:text-white leading-snug">{title}</h3>
           <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="font-bold text-base text-slate-800 dark:text-slate-100">{release.product}</span>
-              {release.partner && (
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-                  {release.partner}
-                </span>
-              )}
-            </div>
             <ProductAreaBadge area={release.productArea || release.product_area} />
+            {release.legacy_sourced ? (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-100">
+                Legacy source
+              </span>
+            ) : null}
             {release.source === 'confluence' && (
-              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-900 ring-1 ring-indigo-200/90 dark:bg-indigo-950/60 dark:text-indigo-100 dark:ring-indigo-700/50">
+              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-900 ring-1 ring-indigo-200/90 dark:bg-indigo-950/60 dark:text-indigo-100">
                 Confluence
               </span>
             )}
           </div>
-          {(hasToolLinks || showRawJira) && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <JiraMondayLinks jiraLinks={jl} mondayUrl={release.mondayUrl} compact />
-              {showRawJira && (
-                <span className="text-sm text-slate-600 dark:text-slate-300 font-mono">{release.jira}</span>
-              )}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold ${stageStyle.badge}`}
+            >
+              {pmo}
+            </span>
+            {showJiraStatus && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Jira: <span className="font-semibold text-slate-700 dark:text-slate-200">{release.jira_status}</span>
+              </span>
+            )}
+          </div>
         </div>
-        <StageChip stage={release.stage} />
       </div>
 
-      {/* Alert flags */}
-      {hasAlert && (
-        <div className="flex flex-wrap gap-2">
-          {release.blocked && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-red-100 text-red-800 ring-2 ring-red-300/80 dark:bg-red-950/60 dark:text-red-100 dark:ring-red-600/50">
-              <AlertCircle size={14} strokeWidth={2.5} /> Blocked{' '}
-              {release.daysOverdue ? `${release.daysOverdue}d` : ''}
-            </span>
-          )}
-          {release.redAccount && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-red-100 text-red-800 ring-2 ring-red-300/80 dark:bg-red-950/60 dark:text-red-100 dark:ring-red-600/50">
-              <DollarSign size={14} strokeWidth={2.5} /> Red Account · $
-              {(release.arrAtRisk / 1000).toFixed(0)}K ARR at risk
-            </span>
-          )}
-          {release.missingPM && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-amber-100 text-amber-900 ring-2 ring-amber-300/80 dark:bg-amber-950/50 dark:text-amber-100 dark:ring-amber-600/45">
-              <UserX size={14} strokeWidth={2.5} /> PM unassigned
-            </span>
-          )}
-          {release.daysInEAP > 90 && !release.blocked && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-amber-100 text-amber-900 ring-2 ring-amber-300/80 dark:bg-amber-950/50 dark:text-amber-100 dark:ring-amber-600/45">
-              <AlertTriangle size={14} strokeWidth={2.5} /> {release.daysInEAP}d in EAP
-            </span>
-          )}
-        </div>
+      {release.impact_summary && (
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{release.impact_summary}</p>
       )}
 
-      {/* Dates */}
-      <div className="flex gap-4 text-sm">
-        {release.target_date && (
-          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-            <Calendar size={14} strokeWidth={2} />
-            <span>
-              Target:{' '}
-              <span className="font-semibold text-slate-800 dark:text-slate-100">{release.target_date}</span>
+      <div className="flex flex-wrap gap-4 text-sm border-t border-slate-100 dark:border-slate-700 pt-3">
+        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+          <Calendar size={14} strokeWidth={2} />
+          <span>
+            Readiness:{' '}
+            <span className="font-semibold text-slate-800 dark:text-slate-100">
+              {release.product_readiness_date || 'not scheduled'}
             </span>
-          </div>
-        )}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+          <Calendar size={14} strokeWidth={2} />
+          <span>
+            GSP launch:{' '}
+            <span className="font-semibold text-slate-800 dark:text-slate-100">
+              {release.gsp_launch_date || 'not scheduled'}
+            </span>
+          </span>
+        </div>
         {release.actual_date && (
           <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
             <CheckCircle2 size={14} strokeWidth={2} />
@@ -130,44 +100,70 @@ function ReleaseCard({ release }) {
         )}
       </div>
 
-      {/* Contacts */}
       <div className="grid grid-cols-2 gap-1">
-        <ContactBadge icon={Briefcase}      label="PM"  value={release.pm} />
-        <ContactBadge icon={User}           label="SE"  value={release.se_lead} />
-        <ContactBadge icon={HeartHandshake} label="CSM" value={release.csm} />
+        <ContactBadge icon={Briefcase} label="PM" value={release.pm} />
+        <ContactBadge icon={User} label="SE Lead" value={release.se_lead} />
       </div>
 
-      {/* Notes */}
-      {release.notes && (
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-700 pt-2 mt-1">
-          {release.notes}
-        </p>
+      {(hasToolLinks || showRawJira) && (
+        <div className="flex flex-wrap items-center gap-2">
+          <JiraMondayLinks jiraLinks={jl} mondayUrl={release.mondayUrl} compact />
+          {showRawJira && (
+            <span className="text-sm text-slate-600 dark:text-slate-300 font-mono">{release.jira}</span>
+          )}
+        </div>
       )}
+
+      {release.monday_comment && (
+        <div
+          className={`text-sm text-slate-700 dark:text-slate-200 border-t border-slate-100 dark:border-slate-700 pt-3 ${
+            release.commentStale ? 'bg-amber-50/80 dark:bg-amber-950/30 rounded-lg px-3 py-2 ring-1 ring-amber-200/80' : ''
+          }`}
+        >
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Comment</span>
+          <p className="mt-1 whitespace-pre-wrap">{release.monday_comment}</p>
+          {release.commentStale && (
+            <p className="text-xs text-amber-800 dark:text-amber-200 font-semibold mt-1">Stale (&gt; 1 week since update)</p>
+          )}
+        </div>
+      )}
+
+      {gaps.length > 0 && (
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+          <span className="font-bold text-slate-500">Data gaps: </span>
+          {gaps.map((g) => g.label).join(', ')}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
+        <GlipNotifyButton
+          variant="card"
+          context={{
+            partner: release.partner,
+            project_title: title,
+            pmo_status: release.pmo_status,
+            jira_number: release.jira_number,
+            priority_number: release.priority_number,
+          }}
+        />
+      </div>
     </div>
   );
 }
 
 export default function PartnerView({ partner, onClose }) {
-  const { getPartnerReleases, matrixProductOrder } = useData();
+  const { getPartnerReleases, matrixProductOrder, computeGapsForRelease } = useData();
   if (!partner) return null;
 
   const releases = getPartnerReleases(partner);
-  const activeReleases = releases.filter(r => r.stage !== 'N/A');
-  const naCount = releases.filter(r => r.stage === 'N/A').length;
+  const activeReleases = releases.filter((r) => r.stage !== 'N/A');
+  const naCount = releases.filter((r) => r.stage === 'N/A').length;
 
-  // Get representative contact info
-  const rep = activeReleases.find(r => r.csm) || releases[0];
-  const csm = rep?.csm;
-
-  // Stage summary
   const stageCounts = {};
-  activeReleases.forEach(r => {
-    stageCounts[r.stage] = (stageCounts[r.stage] || 0) + 1;
+  activeReleases.forEach((r) => {
+    const k = r.pmo_status || r.stage;
+    stageCounts[k] = (stageCounts[k] || 0) + 1;
   });
-
-  const exceptions = activeReleases.filter(r =>
-    r.blocked || r.redAccount || r.missingPM || (r.daysInEAP > 90)
-  );
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-slate-50/80 to-white dark:from-slate-900 dark:to-slate-950">
@@ -176,16 +172,11 @@ export default function PartnerView({ partner, onClose }) {
           <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{partner}</h2>
           {partner === OTHER_MATRIX_BUCKET && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium leading-snug">
-              Partners outside the 17 strategic matrix rows — listed by product below.
+              Partners outside the strategic matrix rows — listed by product below.
             </p>
           )}
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-semibold leading-relaxed">
             {activeReleases.length} active · {naCount} n/a
-            {exceptions.length > 0 && (
-              <span className="text-red-600 dark:text-red-400 font-bold ml-1">
-                · {exceptions.length} exception{exceptions.length > 1 ? 's' : ''}
-              </span>
-            )}
           </p>
         </div>
         <button
@@ -202,17 +193,11 @@ export default function PartnerView({ partner, onClose }) {
         {Object.entries(stageCounts).map(([stage, count]) => (
           <span
             key={stage}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${STAGES[stage]?.badge || 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600'}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${STAGES[stage]?.badge || 'bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200'}`}
           >
             {stage} <span className="tabular-nums font-bold">{count}</span>
           </span>
         ))}
-        {csm && (
-          <span className="w-full sm:w-auto sm:ml-auto text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1 sm:pt-0">
-            <HeartHandshake size={15} className="text-slate-400 shrink-0" strokeWidth={2} />
-            <span className="font-semibold text-slate-700 dark:text-slate-200">{csm}</span>
-          </span>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-3 min-h-0">
@@ -220,13 +205,13 @@ export default function PartnerView({ partner, onClose }) {
           const productReleases = releases.filter((r) => r.product === product && r.stage !== 'N/A');
           return productReleases.map((release, i) => (
             <ReleaseCard
-              key={`${product}-${release.partner}-${release.jira_number || i}`}
+              key={`${product}-${release.release_key || release.jira_number || i}`}
               release={release}
+              computeGapsForRelease={computeGapsForRelease}
             />
           ));
         })}
 
-        {/* N/A products listed compactly */}
         {naCount > 0 && (
           <div className="rounded-2xl border border-dashed border-slate-200/80 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/40 px-4 py-3">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mb-2 uppercase tracking-wide">

@@ -3,6 +3,7 @@
  */
 import { RELEASES as BUILTIN_RELEASES, CHANGELOG as BUILTIN_CHANGELOG } from './data.js';
 import { initDatabase, loadFromPostgres, replaceAllData } from './database.js';
+import { MONDAY_CANONICAL_FIELDS } from './releaseFields.js';
 import { normalizeProductArea } from '../src/data/constants.js';
 
 /** @type {{ releases: object[], changelog: object[], lastSync: string|null, dataSource: string }} */
@@ -83,12 +84,31 @@ export async function applyIngest({ releases, changelog, meta }) {
 
 function normalizeRelease(r) {
   const product = r.product;
+  const rk =
+    r.release_key != null && String(r.release_key).trim() !== ''
+      ? String(r.release_key).trim()
+      : null;
   return {
     id: r.id,
+    release_key: rk ?? `legacy:${String(r.partner || '')}|${String(product || '')}`,
     partner: r.partner,
     product,
-    product_area: normalizeProductArea(r.product_area, product),
+    product_area: normalizeProductArea(r.product_area, product, r.product_track),
     stage: r.stage ?? 'Dev',
+    pmo_status: r.pmo_status != null ? String(r.pmo_status) : null,
+    jira_status: r.jira_status != null ? String(r.jira_status) : null,
+    project_title: r.project_title ?? null,
+    impact_summary: r.impact_summary ?? null,
+    desc_raw: r.desc_raw ?? null,
+    product_track: r.product_track ?? null,
+    market_type: r.market_type ?? null,
+    priority_number: r.priority_number != null ? Number(r.priority_number) : null,
+    product_readiness_date: r.product_readiness_date ?? null,
+    gsp_launch_date: r.gsp_launch_date ?? null,
+    schedule_url: r.schedule_url ?? null,
+    tracker_group: r.tracker_group ?? null,
+    monday_comment: r.monday_comment ?? null,
+    comment_updated_at: r.comment_updated_at ?? null,
     target_date: r.target_date ?? null,
     actual_date: r.actual_date ?? null,
     jira_number: r.jira_number ?? r.jira_key ?? null,
@@ -111,10 +131,21 @@ function normalizeRelease(r) {
       r.monday_item_id != null && String(r.monday_item_id).trim() !== ''
         ? String(r.monday_item_id).trim()
         : null,
+    data_provenance: r.data_provenance != null ? String(r.data_provenance) : null,
+    is_unmanaged_jira: flag(r.is_unmanaged_jira) ? 1 : 0,
+    include_in_matrix: r.include_in_matrix === 0 || r.include_in_matrix === false ? 0 : 1,
+    legacy_planning_date: r.legacy_planning_date ?? null,
+    legacy_golive_date: r.legacy_golive_date ?? null,
+    legacy_sourced: flag(r.legacy_sourced) ? 1 : 0,
+    salesforce_account_id: r.salesforce_account_id ?? null,
+    bug_report_count: r.bug_report_count != null ? Number(r.bug_report_count) : null,
+    bug_reports_url: r.bug_reports_url ?? null,
   };
 }
 
 function releaseMergeKey(r) {
+  const rk = String(r.release_key || '').trim();
+  if (rk) return rk;
   const p = String(r.partner || '')
     .trim()
     .toLowerCase();
@@ -122,6 +153,14 @@ function releaseMergeKey(r) {
     .trim()
     .toLowerCase();
   return `${p}|||${prod}`;
+}
+
+function isMondayPrimaryRow(r) {
+  const src = (r.source || '').toLowerCase();
+  if (src.includes('monday')) return true;
+  if (r.monday_item_id && String(r.monday_item_id).trim()) return true;
+  if (r.pmo_status != null && String(r.pmo_status).trim()) return true;
+  return false;
 }
 
 /**
@@ -168,10 +207,11 @@ export function mergeConfluenceIntoExisting(existingReleases, confluenceRows) {
     }
 
     const src = (existing.source || '').toLowerCase();
-    if (src === 'jira' || existing.jira_number) {
+    const mondayPrimary = isMondayPrimaryRow(existing);
+    if (src === 'jira' || existing.jira_number || mondayPrimary) {
       const merged = { ...existing };
       merged.notes = [existing.notes, c.notes].filter(Boolean).join('\n\n');
-      for (const f of [
+      const fillFields = [
         'target_date',
         'actual_date',
         'stage',
@@ -181,7 +221,16 @@ export function mergeConfluenceIntoExisting(existingReleases, confluenceRows) {
         'product_area',
         'monday_url',
         'monday_item_id',
-      ]) {
+        'pmo_status',
+        'jira_status',
+        'project_title',
+        'product_track',
+        'market_type',
+        'product_readiness_date',
+        'gsp_launch_date',
+      ];
+      for (const f of fillFields) {
+        if (mondayPrimary && MONDAY_CANONICAL_FIELDS.has(f)) continue;
         if ((merged[f] == null || merged[f] === '') && c[f] != null && c[f] !== '') merged[f] = c[f];
       }
       map.set(k, normalizeRelease(merged));

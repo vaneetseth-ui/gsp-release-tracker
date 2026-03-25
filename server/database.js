@@ -25,6 +25,37 @@ export async function initDatabase() {
   return { enabled: true };
 }
 
+const ADD_COLUMNS_SQL = [
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_area TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS source TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_url TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_item_id TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS release_key TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS pmo_status TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS jira_status TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS project_title TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS impact_summary TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS desc_raw TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_track TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS market_type TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS priority_number INTEGER',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_readiness_date TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS gsp_launch_date TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS schedule_url TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS tracker_group TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_comment TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS comment_updated_at TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS data_provenance TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS is_unmanaged_jira INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS include_in_matrix INTEGER NOT NULL DEFAULT 1',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS legacy_planning_date TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS legacy_golive_date TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS legacy_sourced INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS salesforce_account_id TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS bug_report_count INTEGER',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS bug_reports_url TEXT',
+];
+
 async function ensureSchema() {
   if (!pool) return;
   await pool.query(`
@@ -63,29 +94,118 @@ async function ensureSchema() {
       value TEXT
     );
   `);
-  await pool.query(
-    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_area TEXT'
-  );
-  await pool.query(
-    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS source TEXT'
-  );
-  await pool.query(
-    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_url TEXT'
-  );
-  await pool.query(
-    'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_item_id TEXT'
-  );
+  for (const sql of ADD_COLUMNS_SQL) {
+    await pool.query(sql);
+  }
+  await migrateReleaseKeyAndUnique();
 }
+
+async function migrateReleaseKeyAndUnique() {
+  if (!pool) return;
+  try {
+    await pool.query(`
+      UPDATE releases SET release_key = COALESCE(NULLIF(TRIM(release_key), ''),
+        'legacy:' || id::text || ':' || LOWER(TRIM(partner)) || ':' || LOWER(TRIM(product)))
+      WHERE release_key IS NULL OR TRIM(release_key) = ''
+    `);
+  } catch {
+    /* ignore */
+  }
+  try {
+    await pool.query(`
+      ALTER TABLE releases DROP CONSTRAINT IF EXISTS releases_partner_product_key
+    `);
+  } catch {
+    /* ignore */
+  }
+  try {
+    await pool.query(`
+      ALTER TABLE releases DROP CONSTRAINT IF EXISTS releases_partner_product_unique
+    `);
+  } catch {
+    /* ignore */
+  }
+  try {
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS releases_release_key_uidx ON releases (release_key)
+    `);
+  } catch {
+    /* duplicate keys — leave without unique until data fixed */
+  }
+}
+
+const SELECT_RELEASES_COLS = [
+  'id',
+  'release_key',
+  'partner',
+  'product',
+  'product_area',
+  'stage',
+  'pmo_status',
+  'jira_status',
+  'project_title',
+  'impact_summary',
+  'desc_raw',
+  'product_track',
+  'market_type',
+  'priority_number',
+  'product_readiness_date',
+  'gsp_launch_date',
+  'schedule_url',
+  'tracker_group',
+  'monday_comment',
+  'comment_updated_at',
+  'target_date',
+  'actual_date',
+  'jira_number',
+  'pm',
+  'se_lead',
+  'csm',
+  'notes',
+  'blocked',
+  'red_account',
+  'missing_pm',
+  'days_overdue',
+  'days_in_eap',
+  'arr_at_risk',
+  'source',
+  'monday_url',
+  'monday_item_id',
+  'data_provenance',
+  'is_unmanaged_jira',
+  'include_in_matrix',
+  'legacy_planning_date',
+  'legacy_golive_date',
+  'legacy_sourced',
+  'salesforce_account_id',
+  'bug_report_count',
+  'bug_reports_url',
+].join(', ');
 
 function rowToRelease(row) {
   return {
     id: row.id,
+    release_key: row.release_key ?? null,
     partner: row.partner,
     product: row.product,
     product_area: row.product_area ?? null,
     stage: row.stage,
-    target_date: row.target_date,
-    actual_date: row.actual_date,
+    pmo_status: row.pmo_status ?? null,
+    jira_status: row.jira_status ?? null,
+    project_title: row.project_title ?? null,
+    impact_summary: row.impact_summary ?? null,
+    desc_raw: row.desc_raw ?? null,
+    product_track: row.product_track ?? null,
+    market_type: row.market_type ?? null,
+    priority_number: row.priority_number != null ? Number(row.priority_number) : null,
+    product_readiness_date: row.product_readiness_date ?? null,
+    gsp_launch_date: row.gsp_launch_date ?? null,
+    schedule_url: row.schedule_url ?? null,
+    tracker_group: row.tracker_group ?? null,
+    monday_comment: row.monday_comment ?? null,
+    comment_updated_at: row.comment_updated_at ?? null,
+    target_date: row.target_date ?? null,
+    actual_date: row.actual_date ?? null,
     jira_number: row.jira_number,
     pm: row.pm,
     se_lead: row.se_lead,
@@ -100,6 +220,15 @@ function rowToRelease(row) {
     source: row.source ?? null,
     monday_url: row.monday_url ?? null,
     monday_item_id: row.monday_item_id ?? null,
+    data_provenance: row.data_provenance ?? null,
+    is_unmanaged_jira: row.is_unmanaged_jira ?? 0,
+    include_in_matrix: row.include_in_matrix != null ? row.include_in_matrix : 1,
+    legacy_planning_date: row.legacy_planning_date ?? null,
+    legacy_golive_date: row.legacy_golive_date ?? null,
+    legacy_sourced: row.legacy_sourced ?? 0,
+    salesforce_account_id: row.salesforce_account_id ?? null,
+    bug_report_count: row.bug_report_count != null ? Number(row.bug_report_count) : null,
+    bug_reports_url: row.bug_reports_url ?? null,
   };
 }
 
@@ -121,9 +250,7 @@ export async function loadFromPostgres() {
     return { releases: [], changelog: [], lastSync: null };
   }
   const [relRes, chRes, metaRes] = await Promise.all([
-    pool.query(
-      'SELECT id, partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes, blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk, source, monday_url, monday_item_id FROM releases ORDER BY partner, product'
-    ),
+    pool.query(`SELECT ${SELECT_RELEASES_COLS} FROM releases ORDER BY partner, product`),
     pool.query(
       'SELECT id, change_date, partner, product, from_stage, to_stage, author, note FROM changelog ORDER BY change_date DESC'
     ),
@@ -136,6 +263,55 @@ export async function loadFromPostgres() {
   };
 }
 
+function releaseToInsertRow(r) {
+  return [
+    r.release_key ?? `legacy:${r.partner}|${r.product}`,
+    r.partner,
+    r.product,
+    r.product_area ?? null,
+    r.stage ?? 'Dev',
+    r.pmo_status ?? null,
+    r.jira_status ?? null,
+    r.project_title ?? null,
+    r.impact_summary ?? null,
+    r.desc_raw ?? null,
+    r.product_track ?? null,
+    r.market_type ?? null,
+    r.priority_number ?? null,
+    r.product_readiness_date ?? null,
+    r.gsp_launch_date ?? null,
+    r.schedule_url ?? null,
+    r.tracker_group ?? null,
+    r.monday_comment ?? null,
+    r.comment_updated_at ?? null,
+    r.target_date ?? null,
+    r.actual_date ?? null,
+    r.jira_number ?? r.jira_key ?? null,
+    r.pm ?? null,
+    r.se_lead ?? null,
+    r.csm ?? null,
+    r.notes ?? null,
+    r.blocked ? 1 : 0,
+    r.red_account ? 1 : 0,
+    r.missing_pm ? 1 : 0,
+    r.days_overdue ?? null,
+    r.days_in_eap ?? null,
+    r.arr_at_risk ?? null,
+    r.source ?? null,
+    r.monday_url ?? null,
+    r.monday_item_id ?? null,
+    r.data_provenance != null ? String(r.data_provenance) : null,
+    r.is_unmanaged_jira ? 1 : 0,
+    r.include_in_matrix === 0 || r.include_in_matrix === false ? 0 : 1,
+    r.legacy_planning_date ?? null,
+    r.legacy_golive_date ?? null,
+    r.legacy_sourced ? 1 : 0,
+    r.salesforce_account_id ?? null,
+    r.bug_report_count ?? null,
+    r.bug_reports_url ?? null,
+  ];
+}
+
 export async function replaceAllData({ releases, changelog, lastSync }) {
   if (!pool) return;
   const client = await pool.connect();
@@ -145,35 +321,22 @@ export async function replaceAllData({ releases, changelog, lastSync }) {
 
     const insertRel = `
       INSERT INTO releases (
-        partner, product, product_area, stage, target_date, actual_date, jira_number, pm, se_lead, csm, notes,
-        blocked, red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk, source, monday_url, monday_item_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+        release_key, partner, product, product_area, stage, pmo_status, jira_status,
+        project_title, impact_summary, desc_raw, product_track, market_type, priority_number,
+        product_readiness_date, gsp_launch_date, schedule_url, tracker_group,
+        monday_comment, comment_updated_at, target_date, actual_date, jira_number,
+        pm, se_lead, csm, notes, blocked, red_account, missing_pm, days_overdue, days_in_eap,
+        arr_at_risk, source, monday_url, monday_item_id, data_provenance,
+        is_unmanaged_jira, include_in_matrix, legacy_planning_date, legacy_golive_date,
+        legacy_sourced, salesforce_account_id, bug_report_count, bug_reports_url
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
+        $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45
+      )
     `;
     for (const r of releases) {
-      await client.query(insertRel, [
-        r.partner,
-        r.product,
-        r.product_area ?? null,
-        r.stage ?? 'Dev',
-        r.target_date ?? null,
-        r.actual_date ?? null,
-        r.jira_number ?? r.jira_key ?? null,
-        r.pm ?? null,
-        r.se_lead ?? null,
-        r.csm ?? null,
-        r.notes ?? null,
-        r.blocked ? 1 : 0,
-        r.red_account ? 1 : 0,
-        r.missing_pm ? 1 : 0,
-        r.days_overdue ?? null,
-        r.days_in_eap ?? null,
-        r.arr_at_risk ?? null,
-        r.source ?? null,
-        r.monday_url ?? null,
-        r.monday_item_id ?? null,
-      ]);
+      await client.query(insertRel, releaseToInsertRow(r));
     }
-
 
     if (changelog !== null) {
       await client.query('DELETE FROM changelog');

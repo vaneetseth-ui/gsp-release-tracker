@@ -25,16 +25,17 @@ import { useData } from './context/DataContext.jsx';
 import { useTheme } from './context/ThemeContext.jsx';
 
 const TABS = [
-  { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: 'Partners × products by area' },
-  { id: 'exceptions', label: 'Exceptions',      icon: AlertCircle,   desc: 'Blocked · Red accounts · No PM' },
+  { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language on cached data' },
+  { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: 'Partners × products by bucket' },
+  { id: 'exceptions', label: 'Exceptions',      icon: AlertCircle,   desc: 'Data-quality gaps' },
   { id: 'changelog',  label: 'Changelog',       icon: Clock,         desc: 'Recent status changes' },
-  { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language queries' },
 ];
 
 function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
-  const { getSummary } = useData();
+  const { getSummary, getExceptions } = useData();
   const { theme, toggleTheme } = useTheme();
   const summary = getSummary();
+  const gapCount = getExceptions().length;
 
   return (
     <header className="flex-shrink-0 border-b border-slate-200/70 dark:border-slate-700/80 bg-white/75 dark:bg-slate-900/85 backdrop-blur-md shadow-soft">
@@ -67,11 +68,11 @@ function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
               <span className="tabular-nums">
                 <span className="font-bold text-slate-800 dark:text-slate-100">{summary.byStage.EAP}</span> EAP
               </span>
-              {summary.blocked > 0 && (
+              {gapCount > 0 && (
                 <>
                   <span className="w-px h-3 bg-slate-200 dark:bg-slate-600" aria-hidden />
-                  <span className="text-red-600 dark:text-red-400 tabular-nums font-bold">
-                    <span className="font-extrabold">{summary.blocked}</span> blocked
+                  <span className="text-amber-700 dark:text-amber-300 tabular-nums font-bold">
+                    <span className="font-extrabold">{gapCount}</span> data gaps
                   </span>
                 </>
               )}
@@ -122,9 +123,9 @@ function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
               >
                 <Icon size={17} className="opacity-80 shrink-0" strokeWidth={2} />
                 {tab.label}
-                {tab.id === 'exceptions' && summary.blocked > 0 && (
-                  <span className="min-w-[1.35rem] h-6 px-1 flex items-center justify-center rounded-full text-xs font-bold bg-red-100 text-red-800 ring-2 ring-red-300/80 dark:bg-red-950 dark:text-red-200 dark:ring-red-500/50">
-                    {summary.blocked}
+                {tab.id === 'exceptions' && gapCount > 0 && (
+                  <span className="min-w-[1.35rem] h-6 px-1 flex items-center justify-center rounded-full text-xs font-bold bg-amber-100 text-amber-900 ring-2 ring-amber-300/80 dark:bg-amber-950 dark:text-amber-100 dark:ring-amber-500/50">
+                    {gapCount}
                   </span>
                 )}
               </button>
@@ -153,7 +154,7 @@ function formatSyncTime(isoString) {
 
 export default function App() {
   const { refresh: refreshReleases, dataStatus, loadError, loading: releasesLoading } = useData();
-  const [activeTab, setActiveTab] = useState('matrix');
+  const [activeTab, setActiveTab] = useState('ask');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
 
@@ -216,6 +217,7 @@ export default function App() {
         <main
           className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 min-w-0 ${panelOpen ? 'lg:mr-0' : ''}`}
         >
+          {activeTab === 'ask' && <AskPanel />}
           {activeTab === 'matrix' && (
             <MatrixView
               onSelectPartner={handleSelectPartner}
@@ -227,9 +229,6 @@ export default function App() {
           )}
           {activeTab === 'changelog' && (
             <ChangelogFeed onSelectPartner={handleSelectPartner} />
-          )}
-          {activeTab === 'ask' && (
-            <AskPanel />
           )}
         </main>
 

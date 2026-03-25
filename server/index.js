@@ -20,6 +20,8 @@ import { fileURLToPath } from 'url';
 import * as db from './db.js';
 import { runConfluenceIngestBuild, CONFLUENCE_PAGES } from './confluence/ingest.js';
 import { syncFromJira } from './sync_jira.js';
+import { postGlipMessage, formatNotifyCardPayload } from './glip.js';
+import { runAskQuery } from './askEngine.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const PORT       = process.env.PORT || 3001;
@@ -150,7 +152,7 @@ app.post('/api/sync/all', async (req, res) => {
 
   steps.push({
     monday: {
-      note: 'No Monday API sync. Populate monday_url / monday_item_id via JIRA_FIELD_MONDAY_URL and JIRA_FIELD_MONDAY_ITEM_ID, or POST /api/ingest.',
+      note: 'Use local `node scripts/sync-local.js` (Monday-first v1.2) from a trusted network; POST /api/ingest. Optional JIRA_FIELD_MONDAY_* still supported.',
     },
   });
 
@@ -222,77 +224,26 @@ app.get('/api/changelog', (req, res) => {
   }
 });
 
-// ── Natural language query (mirrors frontend queryEngine logic) ───────────────
+// ── Natural language query — Postgres cache, v1.2 structured types ────────────
 app.post('/api/query', (req, res) => {
   const { q: rawInput } = req.body;
   if (!rawInput?.trim()) return res.status(400).json({ error: 'Query required' });
-
   try {
-    const q = rawInput.toLowerCase().trim();
-
-    // Resolve partner / product / stage mentions
-    const partners  = db.getPartners();
-    const PRODUCTS  = ['Nova IVA', 'RingCX', 'AIR', 'MVP', 'ACO'];
-    const STAGES    = ['GA','Beta','EAP','Dev','Planned','Blocked'];
-
-    let matchedPartner = partners.find(p => q.includes(p.toLowerCase()));
-    if (!matchedPartner) {
-      matchedPartner = partners.find(p =>
-        p.toLowerCase().split(/[\s&@']+/).filter(w=>w.length>2).some(w => q.includes(w))
-      );
-    }
-
-    const PALIAS = { 'nova iva':'Nova IVA', 'nova':'Nova IVA', 'iva':'Nova IVA',
-                     'ringcx':'RingCX', 'ring cx':'RingCX', 'mvp':'MVP', 'aco':'ACO', 'air':'AIR' };
-    let matchedProduct = PRODUCTS.find(p => q.includes(p.toLowerCase()));
-    if (!matchedProduct) {
-      for (const [alias, prod] of Object.entries(PALIAS)) {
-        if (q.includes(alias)) { matchedProduct = prod; break; }
-      }
-    }
-
-    const matchedStage = STAGES.find(s => q.includes(s.toLowerCase()));
-
-    const T4 = ['what should i','priorit','escalat','what needs','brief me','vp brief','leadership'].some(k=>q.includes(k));
-    const T3 = ['block','exception','red account','no pm','missing pm','unassign','overdue','behind','at risk','stuck','eap too long'].some(k=>q.includes(k));
-    const T2 = ['which partner','all partner','list partner','show all','how many','who is in','partners on','partners for'].some(k=>q.includes(k));
-
-    let result;
-
-    if (T4) {
-      const items = [
-        ...db.getBlocked().map(r=>({ sev:'Critical', partner:r.partner, product:r.product, reason:`Blocked ${r.days_overdue}d`, action:'Escalate to Eng VP — SLA breached' })),
-        ...db.getRedAccounts().map(r=>({ sev:'Critical', partner:r.partner, product:r.product, reason:`Red Acct $${((r.arr_at_risk||0)/1000).toFixed(0)}K ARR`, action:'CSM + Sales VP alignment call' })),
-        ...db.getOverdueEAP().map(r=>({ sev:'High', partner:r.partner, product:r.product, reason:`${r.days_in_eap}d in EAP (>90d)`, action:'PM to drive Beta readiness review' })),
-        ...db.getMissingPM().map(r=>({ sev:'High', partner:r.partner, product:r.product, reason:'No PM assigned', action:'PMO assign owner within 48h' })),
-      ];
-      result = { tier:4, intent:'escalation_brief', items, sources:['Jira','PostgreSQL','SFDC','Monday'] };
-    } else if (T3) {
-      if (q.includes('block'))                                               result = { tier:3, intent:'blocked',    rows: db.getBlocked(),      sources:['Jira','Monday'] };
-      else if (q.includes('red account') || q.includes('arr'))              result = { tier:3, intent:'red',        rows: db.getRedAccounts(),  sources:['SFDC','PostgreSQL'] };
-      else if (q.includes('no pm') || q.includes('missing pm'))             result = { tier:3, intent:'nopm',       rows: db.getMissingPM(),    sources:['Monday','Jira'] };
-      else if (q.includes('overdue') || q.includes('behind') || q.includes('stuck')) result = { tier:3, intent:'eap', rows: db.getOverdueEAP(), sources:['Jira'] };
-      else                                                                   result = { tier:3, intent:'exceptions', rows: db.getExceptions(),   sources:['All'] };
-    } else if (T2 || (matchedProduct && !matchedPartner) || (matchedStage && !matchedPartner)) {
-      let rows;
-      if      (matchedProduct && matchedStage) rows = db.getReleasesByProduct(matchedProduct).filter(r=>r.stage===matchedStage);
-      else if (matchedProduct)                 rows = db.getReleasesByProduct(matchedProduct);
-      else if (matchedStage)                   rows = db.getReleasesByStage(matchedStage);
-      else                                     rows = db.getAllReleases().filter(r=>r.stage!=='N/A');
-      result = { tier:2, intent:'cross_scan', rows, matchedProduct, matchedStage, sources:['Jira','Monday','Confluence'] };
-    } else if (matchedPartner && matchedProduct) {
-      const record = db.getRelease(matchedPartner, matchedProduct);
-      result = { tier:1, intent:'direct_lookup', record, matchedPartner, matchedProduct, sources:['Jira','Monday'] };
-    } else if (matchedPartner) {
-      const rows = db.getReleasesByPartner(matchedPartner);
-      result = { tier:1, intent:'partner_summary', rows, matchedPartner, sources:['Jira','Monday','Confluence'] };
-    } else {
-      result = { tier:0, intent:'unknown', message: "Couldn't parse query — try a partner name, product, or keyword like 'blocked' or 'escalate'." };
-    }
-
+    const result = runAskQuery(rawInput, db);
     res.json({ query: rawInput, ...result, timestamp: new Date().toISOString() });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/glip', async (req, res) => {
+  try {
+    const payload = formatNotifyCardPayload(req.body || {});
+    await postGlipMessage(payload);
+    res.json({ ok: true });
+  } catch (e) {
+    const status = e.code === 'NO_WEBHOOK' ? 503 : 500;
+    res.status(status).json({ ok: false, error: e.message || String(e) });
   }
 });
 

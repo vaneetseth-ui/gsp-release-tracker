@@ -1,8 +1,8 @@
 /**
- * MatrixView — release grid with light, readable layout (soft grid, airy type)
+ * MatrixView — release grid (v1.2: matrix-eligible rows only, no exception cell chrome)
  */
 import React, { useState } from 'react';
-import { AlertCircle, AlertTriangle, DollarSign, UserX } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { STAGES } from '../data/stages.js';
 import {
   OTHER_MATRIX_BUCKET,
@@ -15,7 +15,6 @@ const AREA_HEADER_TINT = [
   'bg-violet-50/90 text-violet-900',
   'bg-sky-50/90 text-sky-900',
   'bg-teal-50/90 text-teal-900',
-  'bg-amber-50/90 text-amber-900',
 ];
 
 function Cell({ release, onClick, tdClass = '', title: titleProp }) {
@@ -30,48 +29,25 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
   const stage = release.stage || 'N/A';
   const s = STAGES[stage] || STAGES['N/A'];
   const isNA = stage === 'N/A';
-  const hasAlert =
-    release.blocked ||
-    release.redAccount ||
-    release.missingPM ||
-    (release.daysInEAP && release.daysInEAP > 90);
-  const isBlocked = !!release.blocked;
-  const isCritical = isBlocked || !!release.redAccount;
+  const label = release.pmo_status || s.label;
 
   return (
     <td
       className={`px-1 py-2.5 text-center align-middle transition-colors ${
-        isCritical
-          ? 'ring-2 ring-inset ring-red-400/90 dark:ring-red-500/70 bg-red-50/90 dark:bg-red-950/35'
-          : hasAlert
-            ? 'ring-2 ring-inset ring-amber-400/75 dark:ring-amber-500/50 bg-amber-50/70 dark:bg-amber-950/25'
-            : ''
-      } ${isNA ? '' : 'cursor-pointer hover:bg-sky-50/70 dark:hover:bg-sky-950/40'} ${tdClass}`}
+        isNA ? '' : 'cursor-pointer hover:bg-sky-50/70 dark:hover:bg-sky-950/40'
+      } ${tdClass}`}
       onClick={() => !isNA && onClick(release)}
-      title={titleProp ?? release.notes ?? ''}
+      title={titleProp ?? release.project_title ?? release.notes ?? ''}
     >
-      <div className="inline-flex flex-col items-center gap-1">
+      <div className="inline-flex flex-col items-center gap-0.5">
         <span
-          className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold leading-tight ${s.badge} ${isNA ? 'opacity-45' : ''} ${isCritical ? 'font-extrabold shadow-sm' : ''}`}
+          className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold leading-tight ${s.badge} ${isNA ? 'opacity-45' : ''}`}
         >
-          {s.label}
+          {label.length > 18 ? `${label.slice(0, 16)}…` : label}
         </span>
-        {hasAlert && (
-          <span className="flex gap-0.5">
-            {release.blocked && (
-              <AlertCircle size={12} className="text-red-600 dark:text-red-400" strokeWidth={2.5} />
-            )}
-            {release.redAccount && (
-              <DollarSign size={12} className="text-red-600 dark:text-red-400" strokeWidth={2.5} />
-            )}
-            {release.missingPM && (
-              <UserX size={12} className="text-amber-600 dark:text-amber-400" strokeWidth={2.5} />
-            )}
-            {release.daysInEAP > 90 && !release.blocked && (
-              <AlertTriangle size={12} className="text-amber-600 dark:text-amber-400" strokeWidth={2.5} />
-            )}
-          </span>
-        )}
+        {release.legacy_sourced ? (
+          <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300">Legacy</span>
+        ) : null}
       </div>
     </td>
   );
@@ -86,7 +62,7 @@ function SummaryBar({ summary }) {
       </span>
       {stageOrder.map(
         (stage) =>
-          summary.byStage[stage] > 0 && (
+          (summary.byStage[stage] || 0) > 0 && (
             <span
               key={stage}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${STAGES[stage].badge}`}
@@ -97,22 +73,10 @@ function SummaryBar({ summary }) {
           )
       )}
       <div className="flex flex-wrap gap-3 ml-auto text-sm text-slate-600 dark:text-slate-300">
-        {summary.blocked > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-200 font-bold ring-1 ring-red-300/80 dark:ring-red-600/50">
-            <AlertCircle size={14} strokeWidth={2.5} />
-            {summary.blocked} blocked
-          </span>
-        )}
-        {summary.redAccounts > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-200 font-bold ring-1 ring-red-300/80 dark:ring-red-600/50">
-            <DollarSign size={14} strokeWidth={2.5} />
-            {summary.redAccounts} red acct
-          </span>
-        )}
-        {summary.missingPM > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-100 font-bold ring-1 ring-amber-300/80 dark:ring-amber-600/40">
-            <UserX size={14} strokeWidth={2.5} />
-            {summary.missingPM} no PM
+        {(summary.withSchedule || 0) > 0 && (
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold ring-1 ring-emerald-200/80">
+            <Calendar size={14} strokeWidth={2.5} />
+            {summary.withSchedule} with schedule
           </span>
         )}
       </div>
@@ -123,7 +87,7 @@ function SummaryBar({ summary }) {
 export default function MatrixView({ onSelectPartner, onSelectRelease }) {
   const [hoveredPartner, setHoveredPartner] = useState(null);
   const {
-    releases,
+    matrixReleases,
     matrixPartners,
     productAreaGroups,
     matrixProductOrder,
@@ -153,209 +117,189 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
               </span>
             )
         )}
-        <span className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 ml-1">
-          <span className="inline-flex items-center gap-0.5 font-semibold">
-            <AlertCircle size={12} className="text-red-600 dark:text-red-400" strokeWidth={2.5} /> blocked
-          </span>
-          <span className="inline-flex items-center gap-0.5 font-semibold">
-            <DollarSign size={12} className="text-red-600 dark:text-red-400" strokeWidth={2.5} /> red
-          </span>
-          <span className="inline-flex items-center gap-0.5 font-semibold">
-            <UserX size={12} className="text-amber-600 dark:text-amber-400" strokeWidth={2.5} /> no PM
-          </span>
-          <span className="inline-flex items-center gap-0.5 font-semibold">
-            <AlertTriangle size={12} className="text-amber-600 dark:text-amber-400" strokeWidth={2.5} /> EAP
-          </span>
+        <span className="text-slate-400 dark:text-slate-500 ml-2 text-xs">
+          Cell shows PMO status (truncated) · see card for full text
         </span>
         {loading && <span className="text-slate-400 dark:text-slate-500 ml-auto font-medium">Loading…</span>}
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-4 sm:px-5 pb-4">
-        {!loading && releases.length === 0 && (
+        {!loading && matrixReleases.length === 0 && (
           <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 ring-1 ring-slate-200/60 dark:ring-slate-700 shadow-soft px-6 py-14 text-center">
             <p className="text-base font-semibold text-slate-700 dark:text-slate-200">No release data to show</p>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md mx-auto leading-relaxed">
               {dataStatus === 'error'
                 ? loadError || 'Could not load /api/releases.'
-                : 'The API returned no rows. Sync or ingest releases, then refresh.'}
+                : 'The API returned no matrix rows. Run Monday-first sync, then refresh.'}
             </p>
           </div>
         )}
-        {loading && releases.length === 0 && (
+        {loading && matrixReleases.length === 0 && (
           <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 ring-1 ring-slate-200/60 dark:ring-slate-700 shadow-soft px-6 py-14 text-center">
             <p className="text-base font-semibold text-slate-600 dark:text-slate-300">Loading release data…</p>
           </div>
         )}
-        {releases.length > 0 && (
-        <div className="rounded-2xl bg-white/90 dark:bg-slate-900/85 ring-1 ring-slate-200/60 dark:ring-slate-700/80 shadow-soft overflow-hidden">
-          <table className="w-full text-[0.95rem] sm:text-base border-collapse">
-            <thead>
-              <tr>
-                <th
-                  rowSpan={2}
-                  className="sticky left-0 z-30 w-[11rem] min-w-[11rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 py-3 text-left align-bottom border-b border-r border-slate-100 dark:border-slate-700"
-                >
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Partner
-                  </span>
-                </th>
-                {productAreaGroups.map((g, gi) => (
+        {matrixReleases.length > 0 && (
+          <div className="rounded-2xl bg-white/90 dark:bg-slate-900/85 ring-1 ring-slate-200/60 dark:ring-slate-700/80 shadow-soft overflow-hidden">
+            <table className="w-full text-[0.95rem] sm:text-base border-collapse">
+              <thead>
+                <tr>
                   <th
-                    key={g.area}
-                    colSpan={g.products.length}
-                    className={`px-2 py-2 text-center align-middle border-b border-slate-100 dark:border-slate-700 ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} dark:opacity-95 dark:ring-1 dark:ring-slate-600/30`}
+                    rowSpan={2}
+                    className="sticky left-0 z-30 w-[11rem] min-w-[11rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 py-3 text-left align-bottom border-b border-r border-slate-100 dark:border-slate-700"
                   >
-                    <span className="text-[10px] font-semibold leading-snug tracking-wide">{g.area}</span>
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      Partner
+                    </span>
                   </th>
-                ))}
-                <th
-                  rowSpan={2}
-                  className="px-2 py-3 text-center align-bottom border-b border-l border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 w-16"
-                >
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    SE
-                  </span>
-                </th>
-                <th
-                  rowSpan={2}
-                  className="px-2 py-3 text-center align-bottom border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 w-16"
-                >
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    CSM
-                  </span>
-                </th>
-              </tr>
-              <tr>
-                {productAreaGroups.map((g, gi) =>
-                  g.products.map((p, pi) => (
+                  {productAreaGroups.map((g, gi) => (
                     <th
-                      key={p}
-                      className={`px-1.5 py-2 text-center align-middle border-b border-slate-100 dark:border-slate-700 max-w-[4.5rem] ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} dark:opacity-95 ${pi === 0 ? 'border-l border-l-slate-200/60 dark:border-l-slate-600' : ''}`}
+                      key={g.area || g.bucket}
+                      colSpan={g.products.length}
+                      className={`px-2 py-2 text-center align-middle border-b border-slate-100 dark:border-slate-700 ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} dark:opacity-95 dark:ring-1 dark:ring-slate-600/30`}
                     >
-                      <span className="text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight block hyphens-auto">
-                        {p}
+                      <span className="text-[10px] font-semibold leading-snug tracking-wide">
+                        {g.bucket || g.area}
                       </span>
                     </th>
-                  ))
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {matrixPartners.map((rowKey, idx) => {
-                const rowReleases = matrixProductOrder.map((p) => getMatrixRelease(rowKey, p));
-                const firstRelease = rowReleases.find((r) => r);
-                const seLead = firstRelease?.se_lead;
-                const csm = firstRelease?.csm;
-                const hasException = rowReleases.some(
-                  (r) => r && (r.blocked || r.redAccount || r.missingPM || r.daysInEAP > 90)
-                );
-                const isHovered = hoveredPartner === rowKey;
-                const rowBg =
-                  idx % 2 === 0 ? 'bg-white dark:bg-slate-900/40' : 'bg-slate-50/40 dark:bg-slate-800/30';
-                const segment = matrixPartnerSegment(rowKey);
-                const isOtherRow = rowKey === OTHER_MATRIX_BUCKET;
-
-                return (
-                  <tr
-                    key={rowKey}
-                    className={`${rowBg} ${isHovered ? '!bg-sky-50/50 dark:!bg-sky-950/40' : ''} transition-colors`}
-                    onMouseEnter={() => setHoveredPartner(rowKey)}
-                    onMouseLeave={() => setHoveredPartner(null)}
+                  ))}
+                  <th
+                    rowSpan={2}
+                    className="px-2 py-3 text-center align-bottom border-b border-l border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 w-16"
                   >
-                    <td
-                      className={`sticky left-0 z-20 px-3 py-2.5 border-b border-r border-slate-100 dark:border-slate-700 cursor-pointer ${rowBg} ${isHovered ? '!bg-sky-50/50 dark:!bg-sky-950/40' : ''} backdrop-blur-sm`}
-                      onClick={() => onSelectPartner(rowKey)}
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      PM
+                    </span>
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="px-2 py-3 text-center align-bottom border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 w-16"
+                  >
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      SE
+                    </span>
+                  </th>
+                </tr>
+                <tr>
+                  {productAreaGroups.map((g, gi) =>
+                    g.products.map((p, pi) => (
+                      <th
+                        key={p}
+                        className={`px-1.5 py-2 text-center align-middle border-b border-slate-100 dark:border-slate-700 max-w-[4.5rem] ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} dark:opacity-95 ${pi === 0 ? 'border-l border-l-slate-200/60 dark:border-l-slate-600' : ''}`}
+                      >
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight block hyphens-auto">
+                          {p}
+                        </span>
+                      </th>
+                    ))
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {matrixPartners.map((rowKey, idx) => {
+                  const rowReleases = matrixProductOrder.map((p) => getMatrixRelease(rowKey, p));
+                  const firstRelease = rowReleases.find((r) => r);
+                  const seLead = firstRelease?.se_lead;
+                  const pm = firstRelease?.pm;
+                  const isHovered = hoveredPartner === rowKey;
+                  const rowBg =
+                    idx % 2 === 0 ? 'bg-white dark:bg-slate-900/40' : 'bg-slate-50/40 dark:bg-slate-800/30';
+                  const segment = matrixPartnerSegment(rowKey);
+                  const isOtherRow = rowKey === OTHER_MATRIX_BUCKET;
+
+                  return (
+                    <tr
+                      key={rowKey}
+                      className={`${rowBg} ${isHovered ? '!bg-sky-50/50 dark:!bg-sky-950/40' : ''} transition-colors`}
+                      onMouseEnter={() => setHoveredPartner(rowKey)}
+                      onMouseLeave={() => setHoveredPartner(null)}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {hasException && (
-                          <span
-                            className="w-1.5 h-9 rounded-full bg-red-500 dark:bg-red-500 flex-shrink-0 ring-2 ring-red-200/80 dark:ring-red-800"
-                            aria-hidden
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <span
-                            className={`font-semibold text-sm text-slate-800 dark:text-slate-100 leading-snug hover:text-rc-blue dark:hover:text-sky-400 transition-colors block ${isOtherRow ? 'italic text-slate-600 dark:text-slate-400' : ''}`}
-                          >
-                            {rowKey}
-                          </span>
-                          {segment && (
-                            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 leading-tight block mt-0.5">
-                              {segment}
+                      <td
+                        className={`sticky left-0 z-20 px-3 py-2.5 border-b border-r border-slate-100 dark:border-slate-700 cursor-pointer ${rowBg} ${isHovered ? '!bg-sky-50/50 dark:!bg-sky-950/40' : ''} backdrop-blur-sm`}
+                        onClick={() => onSelectPartner(rowKey)}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="min-w-0">
+                            <span
+                              className={`font-semibold text-sm text-slate-800 dark:text-slate-100 leading-snug hover:text-rc-blue dark:hover:text-sky-400 transition-colors block ${isOtherRow ? 'italic text-slate-600 dark:text-slate-400' : ''}`}
+                            >
+                              {rowKey}
                             </span>
-                          )}
+                            {segment && (
+                              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 leading-tight block mt-0.5">
+                                {segment}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {productAreaGroups.map((g, gi) =>
-                      g.products.map((p, pi) => {
-                        const release = getMatrixRelease(rowKey, p);
-                        let cellTitle;
-                        if (release) {
-                          const base = release.notes || '';
-                          if (isOtherRow) {
-                            const n = releases.filter(
-                              (r) =>
-                                r.product === p && matrixPartnerBucket(r.partner) == null
-                            ).length;
-                            cellTitle =
-                              n > 1
-                                ? `${base ? `${base}\n` : ''}Representative of ${n} GSP rows (highest-severity first).`
-                                : base;
-                          } else {
-                            const n = releases.filter(
-                              (r) =>
-                                r.product === p && matrixPartnerBucket(r.partner) === rowKey
-                            ).length;
-                            cellTitle =
-                              n > 1
-                                ? `${base ? `${base}\n` : ''}${n} rows mapped to this partner (showing highest-severity).`
-                                : base;
+                      {productAreaGroups.map((g, gi) =>
+                        g.products.map((p, pi) => {
+                          const release = getMatrixRelease(rowKey, p);
+                          let cellTitle;
+                          if (release) {
+                            const base = release.project_title || release.notes || '';
+                            if (isOtherRow) {
+                              const n = matrixReleases.filter(
+                                (r) => r.product === p && matrixPartnerBucket(r.partner) == null
+                              ).length;
+                              cellTitle =
+                                n > 1
+                                  ? `${base ? `${base}\n` : ''}Representative of ${n} GSP rows (by priority).`
+                                  : base;
+                            } else {
+                              const n = matrixReleases.filter(
+                                (r) => r.product === p && matrixPartnerBucket(r.partner) === rowKey
+                              ).length;
+                              cellTitle =
+                                n > 1
+                                  ? `${base ? `${base}\n` : ''}${n} rows (showing highest priority).`
+                                  : base;
+                            }
                           }
-                        }
-                        const band =
-                          gi % 2 === 0
-                            ? 'bg-white/30 dark:bg-slate-900/20'
-                            : 'bg-slate-50/25 dark:bg-slate-800/20';
-                        const groupEdge = pi === 0 ? 'border-l border-l-slate-200/50 dark:border-l-slate-600/50' : '';
-                        return (
-                          <Cell
-                            key={p}
-                            release={release}
-                            onClick={onSelectRelease}
-                            title={cellTitle}
-                            tdClass={`border-b border-slate-100 ${band} ${groupEdge}`}
-                          />
-                        );
-                      })
-                    )}
-
-                    <td className="border-b border-l border-slate-100 dark:border-slate-700 px-1 py-2 text-center bg-slate-50/20 dark:bg-slate-800/30">
-                      {seLead ? (
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          {seLead.split(' ')[0]}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>
+                          const band =
+                            gi % 2 === 0
+                              ? 'bg-white/30 dark:bg-slate-900/20'
+                              : 'bg-slate-50/25 dark:bg-slate-800/20';
+                          const groupEdge = pi === 0 ? 'border-l border-l-slate-200/50 dark:border-l-slate-600/50' : '';
+                          return (
+                            <Cell
+                              key={p}
+                              release={release}
+                              onClick={onSelectRelease}
+                              title={cellTitle}
+                              tdClass={`border-b border-slate-100 ${band} ${groupEdge}`}
+                            />
+                          );
+                        })
                       )}
-                    </td>
 
-                    <td className="border-b border-slate-100 dark:border-slate-700 px-1 py-2 text-center bg-slate-50/20 dark:bg-slate-800/30">
-                      {csm ? (
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          {csm.split(' ')[0]}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      <td className="border-b border-l border-slate-100 dark:border-slate-700 px-1 py-2 text-center bg-slate-50/20 dark:bg-slate-800/30">
+                        {pm ? (
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            {pm.split(' ')[0]}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>
+                        )}
+                      </td>
+
+                      <td className="border-b border-slate-100 dark:border-slate-700 px-1 py-2 text-center bg-slate-50/20 dark:bg-slate-800/30">
+                        {seLead ? (
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            {seLead.split(' ')[0]}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

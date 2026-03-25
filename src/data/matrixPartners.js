@@ -1,7 +1,9 @@
 /**
  * Release Matrix: fixed strategic partner rows + "Other GSPs" for everything else.
  * Match order: longer aliases first (e.g. "DT - Unify" before "DT").
+ * v1.2: partners-override.json checked first (Change 7).
  */
+import { partnerKeyFromOverrides } from '../utils/partnerUtils.js';
 
 export const OTHER_MATRIX_BUCKET = 'Other GSPs';
 
@@ -51,6 +53,9 @@ export function matrixPartnerBucket(rawPartner) {
   const p = norm(rawPartner);
   if (!p) return null;
 
+  const fromOverride = partnerKeyFromOverrides(rawPartner);
+  if (fromOverride && STRATEGIC_PARTNER_ORDER.includes(fromOverride)) return fromOverride;
+
   for (const def of STRATEGIC_PARTNER_DEFS) {
     for (const a of def.aliases) {
       if (norm(a) === p) return def.key;
@@ -74,14 +79,12 @@ export function matrixPartnerBucket(rawPartner) {
   return null;
 }
 
-/** Severity for picking one cell when multiple releases share a bucket + product */
+/** Severity for picking one cell when multiple releases share a bucket + product (v1.2: Monday priority) */
 export function matrixCellSeverity(r) {
   if (!r) return 0;
-  if (r.blocked) return 50;
-  if (r.redAccount) return 40;
-  if (r.missingPM) return 30;
-  if ((r.daysInEAP || 0) > 90) return 20;
-  return 10;
+  const pr = Number(r.priority_number);
+  if (Number.isFinite(pr)) return 1000 + pr;
+  return 100;
 }
 
 export function pickRepresentativeRelease(candidates) {

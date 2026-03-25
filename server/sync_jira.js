@@ -1,7 +1,7 @@
 /**
  * sync_jira.js — Jira → GSP Release Tracker data sync
  *
- * Fetches issues from Jira (project GSP + PTR) and transforms them
+ * Fetches issues from Jira (project GSP only, v1.2) and transforms them
  * into the dashboard schema: { partner, product, stage, pm, se_lead,
  * csm, target_date, actual_date, jira_number, notes, blocked,
  * red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk }
@@ -143,8 +143,11 @@ function transformIssue(issue, index) {
   const labels     = f.labels  || [];
   const components = f.components || [];
 
-  // Partner & product
-  const partner = getCustomField(issue, FIELD_MAP.partner) || parsePartnerFromSummary(summary);
+  // Partner & product — v1.2: Jira component[0] is GSP partner when no custom field
+  const partner =
+    getCustomField(issue, FIELD_MAP.partner) ||
+    (components[0]?.name && String(components[0].name).trim()) ||
+    parsePartnerFromSummary(summary);
   const product = getCustomField(issue, FIELD_MAP.product) || parseProductFromSummary(summary, labels, components);
 
   // Stage
@@ -192,6 +195,7 @@ function transformIssue(issue, index) {
 
   return {
     id:           index + 1,
+    release_key:  `jira:${issue.key}`,
     jira_key:     issue.key,
     partner,
     product,
@@ -273,7 +277,6 @@ export async function syncFromJira() {
 
   const JQL_QUERIES = [
     'project = GSP AND resolution = Unresolved ORDER BY priority DESC, updated DESC',
-    'project = PTR AND resolution = Unresolved ORDER BY priority DESC, updated DESC',
   ];
 
   const allIssues = [];
@@ -305,7 +308,7 @@ export async function syncFromJira() {
     releases,
     fetchedAt:  new Date().toISOString(),
     totalIssues: unique.length,
-    projects:   ['GSP', 'PTR'],
+    projects:   ['GSP'],
     jql:        JQL_QUERIES,
   };
 }
