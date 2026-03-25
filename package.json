@@ -22,7 +22,8 @@
     "sync:confluence:local": "node scripts/confluence-ingest-local.mjs",
     "sync:confluence:merge-push": "node scripts/confluence-local-merge-push.mjs",
     "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "heroku:setup:glip": "bash scripts/heroku-setup-glip.sh"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
