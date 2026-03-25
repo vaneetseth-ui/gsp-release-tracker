@@ -6,12 +6,13 @@ import { initDatabase, loadFromPostgres, replaceAllData } from './database.js';
 import { MONDAY_CANONICAL_FIELDS } from './releaseFields.js';
 import { normalizeProductArea } from '../src/data/constants.js';
 
-/** @type {{ releases: object[], changelog: object[], lastSync: string|null, dataSource: string }} */
+/** @type {{ releases: object[], changelog: object[], lastSync: string|null, dataSource: string, lastIngestMeta: object|null }} */
 let store = {
   releases: [],
   changelog: [],
   lastSync: null,
   dataSource: 'memory',
+  lastIngestMeta: null,
 };
 
 function flag(v) {
@@ -31,12 +32,16 @@ export async function initDataStore() {
   store.changelog = [...BUILTIN_CHANGELOG];
   store.lastSync = null;
   store.dataSource = 'memory';
+  store.lastIngestMeta = null;
 
   const { enabled } = await initDatabase();
   if (!enabled) return;
 
   try {
     const data = await loadFromPostgres();
+    if (data.lastIngestMeta != null) {
+      store.lastIngestMeta = data.lastIngestMeta;
+    }
     if (data.releases.length > 0) {
       store.releases = data.releases.map((r) => normalizeRelease(r));
       store.changelog = data.changelog.length ? data.changelog : store.changelog;
@@ -68,11 +73,16 @@ export async function applyIngest({ releases, changelog, meta }) {
   store.lastSync = lastSync;
   store.dataSource = process.env.DATABASE_URL ? 'postgres' : 'memory';
 
+  if (meta != null && typeof meta === 'object') {
+    store.lastIngestMeta = meta;
+  }
+
   try {
     await replaceAllData({
       releases: store.releases,
       changelog: changelog !== undefined ? store.changelog : null,
       lastSync,
+      ingestMeta: meta != null && typeof meta === 'object' ? meta : null,
     });
   } catch (e) {
     console.error('applyIngest: persist failed:', e.message);
@@ -116,11 +126,6 @@ function normalizeRelease(r) {
     se_lead: r.se_lead ?? null,
     csm: r.csm ?? null,
     notes: r.notes ?? null,
-    blocked: flag(r.blocked) ? 1 : 0,
-    red_account: flag(r.red_account) ? 1 : 0,
-    missing_pm: flag(r.missing_pm) ? 1 : 0,
-    days_overdue: r.days_overdue ?? null,
-    days_in_eap: r.days_in_eap ?? null,
     arr_at_risk: r.arr_at_risk != null ? Number(r.arr_at_risk) : null,
     source: r.source != null && r.source !== '' ? String(r.source) : null,
     monday_url:
@@ -326,38 +331,11 @@ export function getReleasesByProduct(product) {
     .sort((a, b) => cmpStr(a.partner, b.partner));
 }
 
-export function getExceptions() {
+/** Jira GSP rows with no Monday item (legacy API; UI uses gap view). */
+export function getUnmanagedJiraReleases() {
   return R()
-    .filter(r => flag(r.blocked) || flag(r.red_account) || flag(r.missing_pm) || (r.days_in_eap > 90))
-    .sort((a, b) => {
-      const rank = x =>
-        flag(x.blocked) ? 0 : flag(x.red_account) ? 1 : x.days_in_eap > 90 ? 2 : 3;
-      return rank(a) - rank(b) || cmpStr(a.partner, b.partner);
-    });
-}
-
-export function getBlocked() {
-  return R()
-    .filter(r => flag(r.blocked))
-    .sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0));
-}
-
-export function getRedAccounts() {
-  return R()
-    .filter(r => flag(r.red_account))
-    .sort((a, b) => (b.arr_at_risk || 0) - (a.arr_at_risk || 0));
-}
-
-export function getMissingPM() {
-  return R()
-    .filter(r => flag(r.missing_pm))
+    .filter((r) => flag(r.is_unmanaged_jira))
     .sort((a, b) => cmpStr(a.partner, b.partner));
-}
-
-export function getOverdueEAP() {
-  return R()
-    .filter(r => (r.days_in_eap > 90 || 0) && !flag(r.blocked))
-    .sort((a, b) => (b.days_in_eap || 0) - (a.days_in_eap || 0));
 }
 
 export function getChangelog(limit = 50) {
@@ -381,12 +359,48 @@ export function getSummary() {
     byStage[r.stage] = (byStage[r.stage] || 0) + 1;
   });
 
+  const bySource = {};
+  for (const r of rel) {
+    const s = (r.source || 'unknown').toLowerCase() || 'unknown';
+    bySource[s] = (bySource[s] || 0) + 1;
+  }
+  const unmanagedJira = rel.filter(r => flag(r.is_unmanaged_jira)).length;
+  const mondayRows = rel.filter(r => (r.source || '').toLowerCase() === 'monday');
+  const mondayWithJiraKey = mondayRows.filter(
+    r => r.jira_number != null && String(r.jira_number).trim() !== ''
+  ).length;
+
+  const meta = store.lastIngestMeta;
+  const pullSnapshot =
+    meta && (meta.mondayPriorities != null || meta.jiraGsp != null || meta.trackerRows != null)
+      ? {
+          source: meta.source ?? null,
+          fetchedAt: meta.fetchedAt ?? null,
+          mondayGspPriorityItems: meta.mondayPriorities ?? null,
+          mondayTrackerRowsIndexed: meta.trackerRows ?? null,
+          jiraGspIssuesPulled: meta.jiraGsp ?? null,
+          /** GSP Jira issues that matched a Monday row (same ingest); requires current row counts. */
+          jiraIssuesLinkedToMondayEstimate:
+            meta.jiraGsp != null && Number.isFinite(Number(meta.jiraGsp))
+              ? Math.max(0, Number(meta.jiraGsp) - unmanagedJira)
+              : null,
+        }
+      : null;
+
   return {
     total: active.length,
     byStage,
-    blocked: rel.filter(r => flag(r.blocked)).length,
-    redAccounts: rel.filter(r => flag(r.red_account)).length,
-    missingPM: rel.filter(r => flag(r.missing_pm)).length,
+    /** Counts of cached release rows by `source` (monday / jira / confluence / blended / …). */
+    releaseRowsBySource: bySource,
+    /** Rows from GSP Jira with no Monday priority link (Monday-first pipeline only). */
+    unmanagedJiraRows: unmanagedJira,
+    /** Monday-derived rows that list a Jira key (enriched in Step 5 when issue exists). */
+    mondayRowsWithJiraKey,
+    /**
+     * From last `POST /api/ingest` meta (set by `scripts/sync-local.js`).
+     * Raw API pull sizes before merge into release rows.
+     */
+    lastPullSnapshot: pullSnapshot,
   };
 }
 

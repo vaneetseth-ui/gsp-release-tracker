@@ -31,7 +31,7 @@ const TABS = [
   { id: 'changelog',  label: 'Changelog',       icon: Clock,         desc: 'Recent status changes' },
 ];
 
-function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
+function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
   const { getSummary, getExceptions } = useData();
   const { theme, toggleTheme } = useTheme();
   const summary = getSummary();
@@ -95,8 +95,17 @@ function Header({ activeTab, onTabChange, onRefresh, syncStatus }) {
             </button>
             <button
               type="button"
+              onClick={onSyncNow}
+              title="Start Monday-first sync on the server (requires SYNC_LOCAL_SCRIPT_PATH)"
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 ring-1 ring-slate-200/80 dark:ring-slate-600 hover:bg-white dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              disabled={syncStatus.checking}
+            >
+              Sync now
+            </button>
+            <button
+              type="button"
               onClick={onRefresh}
-              title="Refresh data from the server"
+              title="Reload cached releases from the API"
               className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 ring-1 ring-slate-200/80 dark:ring-slate-600 hover:bg-white dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
               disabled={syncStatus.checking}
             >
@@ -180,6 +189,35 @@ export default function App() {
     setSelectedPartner(release.partner);
   }, []);
 
+  const handleSyncNow = useCallback(async () => {
+    setSyncStatus((s) => ({ ...s, checking: true }));
+    try {
+      const r = await fetch('/api/sync/trigger', { method: 'POST' });
+      const text = await r.text();
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = {};
+      }
+      if (r.status === 202) {
+        for (let i = 0; i < 6; i++) {
+          await new Promise((res) => setTimeout(res, 5000));
+          await fetchHealth();
+        }
+        await refreshReleases();
+      } else if (r.status === 501) {
+        console.info('Sync now:', body.error || text);
+      } else if (!r.ok && r.status !== 401) {
+        console.warn('sync/trigger:', r.status, text);
+      }
+    } catch (e) {
+      console.warn('sync/trigger failed:', e?.message || e);
+    } finally {
+      setSyncStatus((s) => ({ ...s, checking: false }));
+    }
+  }, [fetchHealth, refreshReleases]);
+
   const handleRefresh = useCallback(async () => {
     setSyncStatus((s) => ({ ...s, checking: true }));
     try {
@@ -206,6 +244,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onRefresh={handleRefresh}
+        onSyncNow={handleSyncNow}
         syncStatus={syncStatus}
       />
 

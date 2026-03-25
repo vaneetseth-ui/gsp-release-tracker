@@ -15,7 +15,7 @@ const SUGGESTIONS = [
   'How many RingCX projects are PMO-managed with schedules?',
   'Top 5 critical AT&T projects?',
   'Show launch dates for all projects by row',
-  'Is Talos live on RCX?',
+  'Is Telus live on RCX?',
 ];
 
 const STAGE_COLORS = {
@@ -24,7 +24,8 @@ const STAGE_COLORS = {
   EAP:     'bg-amber-100 text-amber-800',
   Dev:     'bg-purple-100 text-purple-800',
   Planned: 'bg-slate-100 text-slate-600',
-  Blocked: 'bg-red-100 text-red-800',
+  OnHold: 'bg-orange-100 text-orange-900',
+  Blocked: 'bg-orange-100 text-orange-900',
   'N/A':   'bg-slate-50 text-slate-400',
 };
 
@@ -200,13 +201,8 @@ function Tier3Result({ result }) {
   const rows = result.rows || [];
   const label =
     {
-      blocked: 'Blocked',
-      red: 'Red Accounts',
-      nopm: 'No PM Assigned',
-      eap: 'Overdue EAP (>90d)',
-      exceptions: 'All Exceptions',
       jira_not_monday: 'Jira not in Monday',
-    }[result.intent] || 'Exceptions';
+    }[result.intent] || 'Rows';
   return (
     <div className="space-y-2">
       {result.message && <p className="text-sm text-slate-600">{result.message}</p>}

@@ -50,9 +50,9 @@ const PMO_TO_STAGE = {
   'to do': 'Planned',
   open: 'Planned',
   backlog: 'Planned',
-  blocked: 'Blocked',
-  impediment: 'Blocked',
-  'on hold': 'Blocked',
+  blocked: 'OnHold',
+  impediment: 'OnHold',
+  'on hold': 'OnHold',
 };
 
 function normStageFromPmo(text) {
@@ -282,11 +282,6 @@ function baseRecord(mondayItem, provenance) {
     se_lead: col(mondayItem, 'SE Lead'),
     csm: null,
     notes: null,
-    blocked: 0,
-    red_account: 0,
-    missing_pm: 0,
-    days_overdue: null,
-    days_in_eap: null,
     arr_at_risk: null,
     source: 'monday',
     monday_url: `https://monday.com/boards/${mondayItem.board_id}/pulses/${mondayItem.id}`,
@@ -420,11 +415,6 @@ function unmanagedRecord(issue) {
     se_lead: null,
     csm: null,
     notes: summary ? summary.slice(0, 200) : null,
-    blocked: 0,
-    red_account: 0,
-    missing_pm: 0,
-    days_overdue: null,
-    days_in_eap: null,
     arr_at_risk: null,
     source: 'jira',
     monday_url: null,
@@ -491,7 +481,25 @@ async function main() {
     }
   }
 
-  console.log(`  ✓ ${releases.length} total rows (${priorityItems.length} Monday + ${releases.length - priorityItems.length} unmanaged Jira)`);
+  const unmanagedRowCount = releases.length - priorityItems.length;
+  const jiraLinkedToMonday = matchedJiraKeys.size;
+
+  console.log('\n── Data pull breakup ─────────────────────────────────');
+  console.log(
+    `  Monday · GSP Priorities:     ${priorityItems.length} items → ${priorityItems.length} primary release rows (source=monday)`
+  );
+  console.log(
+    `  Monday · Tracker 1 + 2:      ${t1.length} + ${t2.length} items → ${trackerById.size} rows indexed for schedule/dates (not extra DB rows)`
+  );
+  if (CONFIG.jiraPat) {
+    console.log(`  Jira · GSP unresolved:       ${jiraIssues.length} issues pulled (paginated search)`);
+    console.log(`  Jira · linked to Monday row: ${jiraLinkedToMonday} (status/fields merged onto those releases)`);
+    console.log(`  Jira · extra release rows:   ${unmanagedRowCount} (unmanaged — no Priorities item)`);
+  } else {
+    console.log('  Jira:                        skipped (set JIRA_PAT for enrichment + unmanaged rows)');
+  }
+  console.log(`  Total rows for /api/ingest:  ${releases.length}`);
+  console.log('─────────────────────────────────────────────────────');
 
   await wakeupHeroku();
   console.log(`\n▶ POST ${CONFIG.herokuUrl}/api/ingest`);

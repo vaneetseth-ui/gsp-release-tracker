@@ -98,6 +98,30 @@ async function ensureSchema() {
     await pool.query(sql);
   }
   await migrateReleaseKeyAndUnique();
+  await migrateDropLegacyExceptionColumns();
+}
+
+/** v1.3 — remove legacy exception flags (Ch.1 + Ch.19); gaps live in Exceptions tab only */
+async function migrateDropLegacyExceptionColumns() {
+  if (!pool) return;
+  try {
+    await pool.query(`DROP INDEX IF EXISTS idx_releases_blocked`);
+  } catch {
+    /* ignore */
+  }
+  const cols = ['blocked', 'red_account', 'missing_pm', 'days_overdue', 'days_in_eap'];
+  for (const col of cols) {
+    try {
+      await pool.query(`ALTER TABLE releases DROP COLUMN IF EXISTS ${col}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    await pool.query(`UPDATE releases SET stage = 'OnHold' WHERE stage = 'Blocked'`);
+  } catch {
+    /* ignore */
+  }
 }
 
 async function migrateReleaseKeyAndUnique() {
@@ -162,11 +186,6 @@ const SELECT_RELEASES_COLS = [
   'se_lead',
   'csm',
   'notes',
-  'blocked',
-  'red_account',
-  'missing_pm',
-  'days_overdue',
-  'days_in_eap',
   'arr_at_risk',
   'source',
   'monday_url',
@@ -211,11 +230,6 @@ function rowToRelease(row) {
     se_lead: row.se_lead,
     csm: row.csm,
     notes: row.notes,
-    blocked: row.blocked,
-    red_account: row.red_account,
-    missing_pm: row.missing_pm,
-    days_overdue: row.days_overdue,
-    days_in_eap: row.days_in_eap,
     arr_at_risk: row.arr_at_risk != null ? Number(row.arr_at_risk) : null,
     source: row.source ?? null,
     monday_url: row.monday_url ?? null,
@@ -247,19 +261,30 @@ function rowToChangelog(row) {
 
 export async function loadFromPostgres() {
   if (!pool) {
-    return { releases: [], changelog: [], lastSync: null };
+    return { releases: [], changelog: [], lastSync: null, lastIngestMeta: null };
   }
-  const [relRes, chRes, metaRes] = await Promise.all([
+  const [relRes, chRes, metaRes, ingestMetaRes] = await Promise.all([
     pool.query(`SELECT ${SELECT_RELEASES_COLS} FROM releases ORDER BY partner, product`),
     pool.query(
       'SELECT id, change_date, partner, product, from_stage, to_stage, author, note FROM changelog ORDER BY change_date DESC'
     ),
     pool.query("SELECT value FROM ingest_meta WHERE key = 'last_sync'"),
+    pool.query("SELECT value FROM ingest_meta WHERE key = 'last_ingest_meta'"),
   ]);
+  let lastIngestMeta = null;
+  const rawMeta = ingestMetaRes.rows[0]?.value;
+  if (rawMeta) {
+    try {
+      lastIngestMeta = JSON.parse(rawMeta);
+    } catch {
+      lastIngestMeta = null;
+    }
+  }
   return {
     releases: relRes.rows.map(rowToRelease),
     changelog: chRes.rows.map(rowToChangelog),
     lastSync: metaRes.rows[0]?.value ?? null,
+    lastIngestMeta,
   };
 }
 
@@ -291,11 +316,6 @@ function releaseToInsertRow(r) {
     r.se_lead ?? null,
     r.csm ?? null,
     r.notes ?? null,
-    r.blocked ? 1 : 0,
-    r.red_account ? 1 : 0,
-    r.missing_pm ? 1 : 0,
-    r.days_overdue ?? null,
-    r.days_in_eap ?? null,
     r.arr_at_risk ?? null,
     r.source ?? null,
     r.monday_url ?? null,
@@ -312,7 +332,7 @@ function releaseToInsertRow(r) {
   ];
 }
 
-export async function replaceAllData({ releases, changelog, lastSync }) {
+export async function replaceAllData({ releases, changelog, lastSync, ingestMeta }) {
   if (!pool) return;
   const client = await pool.connect();
   try {
@@ -325,13 +345,13 @@ export async function replaceAllData({ releases, changelog, lastSync }) {
         project_title, impact_summary, desc_raw, product_track, market_type, priority_number,
         product_readiness_date, gsp_launch_date, schedule_url, tracker_group,
         monday_comment, comment_updated_at, target_date, actual_date, jira_number,
-        pm, se_lead, csm, notes, blocked, red_account, missing_pm, days_overdue, days_in_eap,
+        pm, se_lead, csm, notes,
         arr_at_risk, source, monday_url, monday_item_id, data_provenance,
         is_unmanaged_jira, include_in_matrix, legacy_planning_date, legacy_golive_date,
         legacy_sourced, salesforce_account_id, bug_report_count, bug_reports_url
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
-        $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45
+        $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39
       )
     `;
     for (const r of releases) {
@@ -362,6 +382,13 @@ export async function replaceAllData({ releases, changelog, lastSync }) {
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
       [lastSync]
     );
+    if (ingestMeta != null && typeof ingestMeta === 'object') {
+      await client.query(
+        `INSERT INTO ingest_meta (key, value) VALUES ('last_ingest_meta', $1)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        [JSON.stringify(ingestMeta)]
+      );
+    }
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');

@@ -143,7 +143,7 @@ npm run dev:server   # Express API → http://localhost:3001
 | GET | `/api/summary` | Portfolio stats |
 | GET | `/api/partners` | All partner names |
 | GET | `/api/releases` | Releases (`?partner=X&product=Y&stage=Z`) |
-| GET | `/api/exceptions` | Exceptions (`?type=blocked\|red\|nopm\|eap`) |
+| GET | `/api/exceptions` | Unmanaged Jira rows (optional `?type=unmanaged`) |
 | GET | `/api/changelog` | Recent changes (`?limit=N&partner=X`) |
 | POST | `/api/query` | Natural language query → 4-tier result |
 
@@ -156,6 +156,15 @@ npm run dev:server   # Express API → http://localhost:3001
 3. Commit and push → Heroku auto-deploys
 
 The dashboard UI stays exactly the same.
+
+---
+
+## Post-deploy checklist (v1.3)
+
+1. **Postgres migration:** On first boot, `ensureSchema` drops legacy exception columns and renames `Blocked` → `OnHold`. Run **`node scripts/sync-local.js`** from a trusted network (with `MONDAY_API_KEY`, `JIRA_PAT`, `HEROKU_URL`, optional `INGEST_TOKEN`) so `/api/ingest` repopulates releases.
+2. **`POST /api/sync/trigger`:** Set **`SYNC_LOCAL_SCRIPT_PATH`** on the dyno only if that host can run `node /absolute/path/to/scripts/sync-local.js` with the same env; otherwise rely on Mac cron (below).
+3. **Mac cron (30 min):** From `dashboard/`, run **`bash scripts/setup-mac-cron.sh`** (interactive: Jira PAT, etc.). Updates crontab to `*/30 * * * *`.
+4. **Python pipeline merge:** If you use `pipeline/ingest/schema.py`, **`SOURCE_PRIORITY` is Monday-first** (v1.3). That folder is outside this git repo — copy or version it alongside your connector jobs.
 
 ---
 

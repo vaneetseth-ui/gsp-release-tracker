@@ -41,11 +41,6 @@ function isCommentStale(commentUpdatedAt) {
 export function normalizeReleaseRow(r) {
   const product = r.product;
   const product_area = normalizeProductArea(r.product_area, product, r.product_track);
-  const blocked = flag(r.blocked);
-  const redAccount = flag(r.red_account ?? r.redAccount);
-  const missingPM = flag(r.missing_pm ?? r.missingPM);
-  const daysInEAP = r.days_in_eap ?? r.daysInEAP ?? null;
-  const daysOverdue = r.days_overdue ?? r.daysOverdue ?? null;
   const arrAtRisk = r.arr_at_risk != null ? Number(r.arr_at_risk) : r.arrAtRisk ?? null;
   const jiraRaw = r.jira_number ?? r.jira_key ?? r.jira ?? null;
   const jiraLinks = buildJiraLinks(jiraTextForLinkParsing(r));
@@ -67,11 +62,6 @@ export function normalizeReleaseRow(r) {
     jiraLinks,
     mondayUrl,
     source: r.source ?? null,
-    blocked,
-    redAccount,
-    missingPM,
-    daysInEAP,
-    daysOverdue,
     arrAtRisk,
     release_key: r.release_key ?? null,
     pmo_status: r.pmo_status ?? null,
@@ -200,6 +190,8 @@ function computeAllGaps(releases) {
 export function DataProvider({ children }) {
   const [allReleases, setAllReleases] = useState([]);
   const [dateRange, setDateRangeState] = useState({ from: null, to: null });
+  /** v1.3 Ch.25 — multi-year OR filter (custom From/To clears this via effect below). */
+  const [selectedYears, setSelectedYears] = useState([]);
   const [loading, setLoading] = useState(true);
   /** 'live' = API returned rows; 'empty' = OK but no rows; 'error' = fetch/parse failed */
   const [dataStatus, setDataStatus] = useState('empty');
@@ -207,6 +199,27 @@ export function DataProvider({ children }) {
 
   const setDateRange = useCallback((update) => {
     setDateRangeState((prev) => (typeof update === 'function' ? update(prev) : { ...prev, ...update }));
+  }, []);
+
+  useEffect(() => {
+    if (dateRange.from || dateRange.to) {
+      setSelectedYears([]);
+    }
+  }, [dateRange.from, dateRange.to]);
+
+  const toggleYear = useCallback((year) => {
+    setDateRangeState({ from: null, to: null });
+    setSelectedYears((prev) => {
+      const next = new Set(prev);
+      if (next.has(year)) next.delete(year);
+      else next.add(year);
+      return [...next].sort().reverse();
+    });
+  }, []);
+
+  const clearTimelineFilter = useCallback(() => {
+    setSelectedYears([]);
+    setDateRangeState({ from: null, to: null });
   }, []);
 
   const load = useCallback(async () => {
@@ -239,22 +252,33 @@ export function DataProvider({ children }) {
 
   const releases = useMemo(() => {
     const { from, to } = dateRange;
-    if (!from && !to) return allReleases;
-    return allReleases.filter((r) => {
-      const d = getReleaseDateForFilter(r);
-      if (!d) return false;
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }, [allReleases, dateRange]);
+    const hasCustom = !!(from || to);
+    if (hasCustom) {
+      return allReleases.filter((r) => {
+        const d = getReleaseDateForFilter(r);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+        return true;
+      });
+    }
+    if (selectedYears.length > 0) {
+      const yset = new Set(selectedYears);
+      return allReleases.filter((r) => {
+        const d = getReleaseDateForFilter(r);
+        if (!d) return false;
+        return yset.has(d.slice(0, 4));
+      });
+    }
+    return allReleases;
+  }, [allReleases, dateRange, selectedYears]);
 
   const matrixReleases = useMemo(
     () => releases.filter((r) => r.includeInMatrix && !r.isUnmanagedJira),
     [releases]
   );
 
-  const isFiltered = !!(dateRange.from || dateRange.to);
+  const isFiltered = !!(dateRange.from || dateRange.to) || selectedYears.length > 0;
 
   const partners = useMemo(() => partnersFromReleases(matrixReleases), [matrixReleases]);
 
@@ -300,6 +324,9 @@ export function DataProvider({ children }) {
       allReleases,
       dateRange,
       setDateRange,
+      selectedYears,
+      toggleYear,
+      clearTimelineFilter,
       isFiltered,
       partners,
       matrixPartners,
@@ -322,6 +349,9 @@ export function DataProvider({ children }) {
       allReleases,
       dateRange,
       setDateRange,
+      selectedYears,
+      toggleYear,
+      clearTimelineFilter,
       isFiltered,
       partners,
       matrixPartners,

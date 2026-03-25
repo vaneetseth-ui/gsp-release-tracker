@@ -10,6 +10,7 @@ import {
   matrixPartnerSegment,
 } from '../data/matrixPartners.js';
 import { useData } from '../context/DataContext.jsx';
+import JiraMondayLinks from './JiraMondayLinks.jsx';
 
 const AREA_HEADER_TINT = [
   'bg-violet-50/90 text-violet-900',
@@ -48,13 +49,23 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
         {release.legacy_sourced ? (
           <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300">Legacy</span>
         ) : null}
+        {(release.mondayUrl || (release.jiraLinks && release.jiraLinks.length > 0)) && (
+          <div
+            className="mt-1 max-w-[7rem] mx-auto"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <JiraMondayLinks jiraLinks={release.jiraLinks || []} mondayUrl={release.mondayUrl} compact />
+          </div>
+        )}
       </div>
     </td>
   );
 }
 
 function SummaryBar({ summary }) {
-  const stageOrder = ['GA', 'Beta', 'EAP', 'Dev', 'Planned', 'Blocked'];
+  const stageOrder = ['GA', 'Beta', 'EAP', 'Dev', 'Planned', 'OnHold'];
   return (
     <div className="flex flex-wrap gap-2 items-center px-4 sm:px-5 py-3.5">
       <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mr-1">

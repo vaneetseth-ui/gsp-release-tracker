@@ -21,7 +21,8 @@
     "sync:confluence": "node scripts/sync-confluence.js",
     "sync:confluence:local": "node scripts/confluence-ingest-local.mjs",
     "sync:confluence:merge-push": "node scripts/confluence-local-merge-push.mjs",
-    "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js"
+    "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
@@ -38,6 +39,7 @@
     "concurrently": "^8.2.2",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "vitest": "^3.0.5"
   }
 }

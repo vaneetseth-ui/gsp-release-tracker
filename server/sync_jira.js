@@ -2,18 +2,17 @@
  * sync_jira.js — Jira → GSP Release Tracker data sync
  *
  * Fetches issues from Jira (project GSP only, v1.2) and transforms them
- * into the dashboard schema: { partner, product, stage, pm, se_lead,
- * csm, target_date, actual_date, jira_number, notes, blocked,
- * red_account, missing_pm, days_overdue, days_in_eap, arr_at_risk }
+ * into the dashboard schema (v1.3): partner from components[0] or custom field;
+ * product from labels/summary/additional components; jira_status verbatim; no legacy exception flags.
  *
  * Field mapping strategy:
- *   - summary          → parsed for partner + product names
- *   - status.name      → normalized to stage
+ *   - summary          → parsed for product names (partner is component[0], v1.3 Ch.16)
+ *   - status.name      → normalized stage (on hold → OnHold, not Blocked)
  *   - assignee         → PM
  *   - duedate          → target_date
  *   - resolutiondate   → actual_date
- *   - labels           → flags (blocked, red-account, no-pm)
- *   - components[0]    → product (if set)
+ *   - labels           → ARR hints only
+ *   - components[1+]   → product hints (components[0] is partner)
  *   - custom fields    → overrideable via env vars (see FIELD_MAP below)
  *
  * Env vars:
@@ -76,9 +75,10 @@ const STATUS_TO_STAGE = {
   'to do':           'Planned',
   'open':            'Planned',
   'backlog':         'Planned',
-  'blocked':         'Blocked',
-  'impediment':      'Blocked',
-  'on hold':         'Blocked',
+  /** Never surface generic "Blocked" for PMO — align with v1.3 Ch.19 */
+  'blocked':         'OnHold',
+  'impediment':      'OnHold',
+  'on hold':         'OnHold',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,8 +97,9 @@ function parsePartnerFromSummary(summary = '') {
 }
 
 function parseProductFromSummary(summary = '', labels = [], components = []) {
-  // 1. Check components first (most reliable)
-  for (const c of components) {
+  // v1.3 Ch.16: components[0] is the GSP partner — do not use it as product.
+  const productComponents = components.slice(1);
+  for (const c of productComponents) {
     for (const prod of KNOWN_PRODUCTS) {
       if (c.name?.toLowerCase().includes(prod.toLowerCase())) return prod;
     }
@@ -126,12 +127,6 @@ function getCustomField(issue, fieldId) {
   if (val.name)        return val.name;
   if (val.value)       return val.value;
   return String(val);
-}
-
-function daysBetween(dateA, dateB = new Date()) {
-  if (!dateA) return null;
-  const d = new Date(dateA);
-  return Math.floor((dateB - d) / (1000 * 60 * 60 * 24));
 }
 
 // ── Transform a single Jira issue → dashboard record ─────────────────────────
@@ -170,11 +165,6 @@ function transformIssue(issue, index) {
   const target_date = f.duedate      || null;
   const actual_date = f.resolutiondate ? f.resolutiondate.split('T')[0] : null;
 
-  // Flags from labels
-  const blocked     = stage === 'Blocked' || labels.some(l => /blocked|impediment|on.hold/i.test(l)) ? 1 : 0;
-  const red_account = labels.some(l => /red.account|red.acct|at.risk/i.test(l)) ? 1 : 0;
-  const missing_pm  = !f.assignee ? 1 : 0;
-
   // ARR at risk (custom field or parsed from labels)
   let arr_at_risk = getCustomField(issue, FIELD_MAP.arr);
   if (!arr_at_risk) {
@@ -185,14 +175,6 @@ function transformIssue(issue, index) {
     }
   }
 
-  // Time calculations
-  const created     = new Date(f.created);
-  const now         = new Date();
-  const days_in_eap = stage === 'EAP' ? daysBetween(created) : null;
-  const days_overdue = (blocked && target_date && new Date(target_date) < now)
-    ? daysBetween(target_date)
-    : null;
-
   return {
     id:           index + 1,
     release_key:  `jira:${issue.key}`,
@@ -200,6 +182,8 @@ function transformIssue(issue, index) {
     partner,
     product,
     stage,
+    pmo_status: null,
+    jira_status: f.status?.name || null,
     target_date,
     actual_date,
     jira_number:  issue.key,
@@ -207,11 +191,6 @@ function transformIssue(issue, index) {
     se_lead,
     csm,
     notes:        f.description ? String(f.description).slice(0, 200).replace(/\n/g, ' ') : null,
-    blocked,
-    red_account,
-    missing_pm,
-    days_overdue,
-    days_in_eap,
     arr_at_risk:  arr_at_risk ? Number(arr_at_risk) : null,
     monday_url: monday_url ? String(monday_url).trim() || null : null,
     monday_item_id: monday_item_id ? String(monday_item_id).trim() || null : null,

@@ -42,12 +42,13 @@ export const STAGES = {
       'bg-slate-100 text-slate-800 ring-1 ring-slate-300/80 dark:bg-slate-800/80 dark:text-slate-100 dark:ring-slate-600/60',
     order: 5,
   },
-  Blocked: {
-    label: 'Blocked',
-    color: 'bg-red-500',
+  /** PMO / Jira "on hold" — never show as generic "Blocked" (v1.3 Ch.19). */
+  OnHold: {
+    label: 'On hold',
+    color: 'bg-orange-500',
     text: 'text-white',
     badge:
-      'bg-red-100 text-red-900 font-bold ring-2 ring-red-300/90 dark:bg-red-950/70 dark:text-red-100 dark:ring-red-500/60',
+      'bg-orange-50 text-orange-950 ring-1 ring-orange-200/90 dark:bg-orange-950/50 dark:text-orange-100 dark:ring-orange-700/50',
     order: 6,
   },
   'N/A': {

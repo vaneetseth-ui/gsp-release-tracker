@@ -5,7 +5,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, ArrowRight, Search, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
 import { STAGES } from '../data/stages.js';
 
-const STAGE_ORDER = { GA: 1, Beta: 2, EAP: 3, Dev: 4, Planned: 5, Blocked: 6, 'N/A': 7 };
+const STAGE_ORDER = {
+  GA: 1,
+  Beta: 2,
+  EAP: 3,
+  Dev: 4,
+  Planned: 5,
+  OnHold: 6,
+  Blocked: 6,
+  'N/A': 7,
+};
+
+function isHoldStage(s) {
+  return s === 'OnHold' || s === 'Blocked';
+}
 
 function normalizeItem(c) {
   return {
@@ -23,8 +36,8 @@ function ChangeDirection({ from, to }) {
   const fromOrder = STAGE_ORDER[from] || 9;
   const toOrder = STAGE_ORDER[to] || 9;
 
-  if (to === 'Blocked') {
-    return <TrendingDown size={14} className="text-red-500 flex-shrink-0" />;
+  if (isHoldStage(to)) {
+    return <TrendingDown size={14} className="text-amber-600 flex-shrink-0" />;
   } else if (toOrder < fromOrder) {
     return <TrendingUp size={14} className="text-emerald-500 flex-shrink-0" />;
   } else if (toOrder > fromOrder) {
@@ -34,7 +47,8 @@ function ChangeDirection({ from, to }) {
 }
 
 function StageBadge({ stage }) {
-  const s = STAGES[stage] || STAGES['N/A'];
+  const key = stage === 'Blocked' ? 'OnHold' : stage;
+  const s = STAGES[key] || STAGES['N/A'];
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${s.badge}`}>
       {s.label}
@@ -43,14 +57,14 @@ function StageBadge({ stage }) {
 }
 
 function ChangeItem({ item, onSelectPartner }) {
-  const isBlock = item.to === 'Blocked';
+  const isHold = isHoldStage(item.to);
   const isUpgrade = (STAGE_ORDER[item.to] || 9) < (STAGE_ORDER[item.from] || 9);
 
   return (
     <div
       className={`rounded-2xl p-4 space-y-2 shadow-sm ring-2 ${
-        isBlock
-          ? 'bg-white dark:bg-slate-900 border-l-[4px] border-l-red-500 dark:border-l-red-400 ring-red-200/80 dark:ring-red-900/50'
+        isHold
+          ? 'bg-white dark:bg-slate-900 border-l-[4px] border-l-amber-500 dark:border-l-amber-400 ring-amber-200/80 dark:ring-amber-900/50'
           : isUpgrade
             ? 'bg-white dark:bg-slate-900 border-l-[4px] border-l-emerald-500 dark:border-l-emerald-400 ring-slate-200/50 dark:ring-slate-600'
             : 'bg-white dark:bg-slate-900 border-l-[4px] border-l-slate-200 dark:border-l-slate-600 ring-slate-200/50 dark:ring-slate-600'
@@ -132,12 +146,12 @@ export default function ChangelogFeed({ onSelectPartner }) {
 
   const upgrades = useMemo(
     () =>
-      items.filter((c) => (STAGE_ORDER[c.to] || 9) < (STAGE_ORDER[c.from] || 9) && c.to !== 'Blocked'),
+      items.filter((c) => (STAGE_ORDER[c.to] || 9) < (STAGE_ORDER[c.from] || 9) && !isHoldStage(c.to)),
     [items]
   );
   const downgrades = useMemo(
     () =>
-      items.filter((c) => c.to === 'Blocked' || (STAGE_ORDER[c.to] || 9) > (STAGE_ORDER[c.from] || 9)),
+      items.filter((c) => isHoldStage(c.to) || (STAGE_ORDER[c.to] || 9) > (STAGE_ORDER[c.from] || 9)),
     [items]
   );
 

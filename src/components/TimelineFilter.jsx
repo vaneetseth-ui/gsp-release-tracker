@@ -1,5 +1,6 @@
 /**
  * TimelineFilter — global year / date range (filters matrix, partner, exceptions).
+ * v1.3 Ch.25: multiple years can be selected (OR); custom From/To overrides year bubbles.
  */
 import React, { useMemo } from 'react';
 import { Calendar, X } from 'lucide-react';
@@ -13,7 +14,16 @@ function yearFromRelease(r) {
 }
 
 export default function TimelineFilter() {
-  const { allReleases, releases, dateRange, setDateRange, isFiltered } = useData();
+  const {
+    allReleases,
+    releases,
+    dateRange,
+    setDateRange,
+    selectedYears,
+    toggleYear,
+    clearTimelineFilter,
+    isFiltered,
+  } = useData();
 
   const years = useMemo(() => {
     const set = new Set();
@@ -24,22 +34,7 @@ export default function TimelineFilter() {
     return [...set].sort().reverse();
   }, [allReleases]);
 
-  const activeYear = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return null;
-    const m = dateRange.from.match(/^(\d{4})-01-01$/);
-    if (m && dateRange.to === `${m[1]}-12-31`) return m[1];
-    return null;
-  }, [dateRange]);
-
-  const selectYear = (year) => {
-    if (activeYear === year) {
-      setDateRange({ from: null, to: null });
-    } else {
-      setDateRange({ from: `${year}-01-01`, to: `${year}-12-31` });
-    }
-  };
-
-  const clear = () => setDateRange({ from: null, to: null });
+  const hasCustomRange = !!(dateRange.from || dateRange.to);
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-2.5 border-b border-slate-100/90 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm flex-shrink-0">
@@ -47,7 +42,7 @@ export default function TimelineFilter() {
 
       <button
         type="button"
-        onClick={clear}
+        onClick={clearTimelineFilter}
         className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
           !isFiltered
             ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white shadow-sm'
@@ -57,20 +52,23 @@ export default function TimelineFilter() {
         All
       </button>
 
-      {years.map((y) => (
-        <button
-          key={y}
-          type="button"
-          onClick={() => selectYear(y)}
-          className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
-            activeYear === y
-              ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white shadow-sm'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200/80 dark:ring-slate-600 hover:ring-slate-300'
-          }`}
-        >
-          {y}
-        </button>
-      ))}
+      {years.map((y) => {
+        const active = !hasCustomRange && selectedYears.includes(y);
+        return (
+          <button
+            key={y}
+            type="button"
+            onClick={() => toggleYear(y)}
+            className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
+              active
+                ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200/80 dark:ring-slate-600 hover:ring-slate-300'
+            }`}
+          >
+            {y}
+          </button>
+        );
+      })}
 
       <span className="hidden sm:block w-px h-5 bg-slate-200 dark:bg-slate-600 mx-0.5" aria-hidden />
 
@@ -94,7 +92,7 @@ export default function TimelineFilter() {
       {isFiltered && (
         <button
           type="button"
-          onClick={clear}
+          onClick={clearTimelineFilter}
           className="inline-flex items-center gap-1 px-2 py-1.5 rounded-full text-sm font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           title="Clear filter"
         >
@@ -109,6 +107,9 @@ export default function TimelineFilter() {
             <span> of </span>
             <span className="tabular-nums">{allReleases.length}</span>
             <span> releases</span>
+            {selectedYears.length > 1 && !hasCustomRange && (
+              <span className="hidden sm:inline"> · {selectedYears.length} years</span>
+            )}
           </>
         ) : (
           <span className="tabular-nums">{allReleases.length} releases</span>

@@ -6,7 +6,8 @@
  *   GET  /api/health            — health check + last sync time
  *   GET  /api/summary           — portfolio stats
  *   GET  /api/releases          — all releases (?partner=X &product=Y &stage=Z)
- *   GET  /api/exceptions        — all exceptions (?type=blocked|red|nopm|eap)
+ *   GET  /api/exceptions        — unmanaged Jira rows (?type=unmanaged optional)
+ *   POST /api/sync/trigger      — optional background Monday sync (SYNC_LOCAL_SCRIPT_PATH + auth)
  *   GET  /api/changelog         — recent changes (?limit=N &partner=X)
  *   POST /api/query             — natural language query → tier-routed result
  *   POST /api/ingest            — push releases from local Jira sync (optional Bearer INGEST_TOKEN)
@@ -15,6 +16,7 @@
  */
 import express   from 'express';
 import cors      from 'cors';
+import { spawn } from 'node:child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as db from './db.js';
@@ -194,22 +196,40 @@ app.get('/api/releases', (req, res) => {
   }
 });
 
-// ── Exceptions ────────────────────────────────────────────────────────────────
+// ── Exceptions (v1.3: unmanaged Jira only; data gaps are UI-only) ─────────────
 app.get('/api/exceptions', (req, res) => {
   const { type } = req.query;
   try {
-    let data;
-    switch (type) {
-      case 'blocked': data = db.getBlocked();      break;
-      case 'red':     data = db.getRedAccounts();  break;
-      case 'nopm':    data = db.getMissingPM();    break;
-      case 'eap':     data = db.getOverdueEAP();   break;
-      default:        data = db.getExceptions();
+    if (type && type !== 'unmanaged') {
+      return res.status(410).json({
+        error:
+          'Legacy ?type=blocked|red|nopm|eap was removed in v1.3. Use the Exceptions tab or ?type=unmanaged.',
+      });
     }
-    res.json(data);
+    res.json(db.getUnmanagedJiraReleases());
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+/** v1.3 Ch.23 — on-demand sync when host can run Monday-first script (e.g. Mac mini); Heroku usually omits SYNC_LOCAL_SCRIPT_PATH. */
+app.post('/api/sync/trigger', (req, res) => {
+  if (!requireIngestAuth(req, res)) return;
+  const scriptPath = (process.env.SYNC_LOCAL_SCRIPT_PATH || '').trim();
+  if (!scriptPath) {
+    return res.status(501).json({
+      ok: false,
+      error:
+        'SYNC_LOCAL_SCRIPT_PATH is not set. Run sync from your machine: node scripts/sync-local.js (see scripts/setup-mac-cron.sh).',
+    });
+  }
+  const child = spawn(process.execPath, [scriptPath], {
+    detached: true,
+    stdio: 'ignore',
+    env: { ...process.env },
+  });
+  child.unref();
+  res.status(202).json({ ok: true, message: 'Sync process started' });
 });
 
 // ── Changelog ─────────────────────────────────────────────────────────────────

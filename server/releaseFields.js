@@ -30,11 +30,6 @@
  * @property {string|null} se_lead
  * @property {string|null} csm Stored but hidden in UI v1.2
  * @property {string|null} notes Short notes / merged
- * @property {number} blocked Legacy flags — ingest sets 0 (Change 1)
- * @property {number} red_account
- * @property {number} missing_pm
- * @property {number|null} days_overdue
- * @property {number|null} days_in_eap
  * @property {number|null} arr_at_risk
  * @property {string|null} source monday | jira | confluence | blended
  * @property {string|null} monday_url

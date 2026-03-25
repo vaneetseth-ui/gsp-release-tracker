@@ -5,7 +5,7 @@
 
 const DEFAULT_JIRA_BROWSE = 'https://jira.ringcentral.com/browse';
 
-/** Jira issue key pattern (e.g. GSP-123, PTR-1042, GSP-0278) */
+/** Jira issue key pattern (e.g. GSP-123). Ingest uses project GSP only (v1.3); keys in prose may include other projects. */
 const ISSUE_KEY_RE = /^[A-Z][A-Z0-9_]*-\d+$/i;
 
 /** Keys embedded in prose or labels (e.g. "RingCX - Contact Center - GSP-0278") */

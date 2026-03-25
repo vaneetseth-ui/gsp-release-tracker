@@ -158,29 +158,7 @@ export function runAskQuery(rawInput, db) {
     };
   }
 
-  // Type 5 — product / codename status (free text)
-  if (matchedProduct && (q.includes('live') || q.includes('status') || q.includes('launched'))) {
-    const rows = matrix.filter(
-      (r) =>
-        norm(r.product).includes(matchedProduct.toLowerCase()) ||
-        norm(r.product_track).includes(matchedProduct.toLowerCase())
-    );
-    const record = rows[0] || null;
-    return {
-      tier: 1,
-      askType: 5,
-      intent: 'product_status',
-      confidence: record ? confidenceForRow(record) : 'High',
-      record,
-      rows,
-      message: record
-        ? null
-        : 'Not on record — no matching product row in cache. Check Exceptions or spelling.',
-      sources: ['postgres_cache'],
-    };
-  }
-
-  // Type 1 — simple partner + product / bucket lookup
+  // Type 1 — partner + product / bucket (before Type 5 so "… status" with partner hits direct lookup)
   if (matchedPartner && (matchedProduct || q.includes('status'))) {
     const rows = matrix.filter((r) => {
       const pOk =
@@ -206,6 +184,28 @@ export function runAskQuery(rawInput, db) {
       message: record
         ? null
         : 'Not on record — no row for that partner/product mix in cache.',
+      sources: ['postgres_cache'],
+    };
+  }
+
+  // Type 5 — product / codename only (no partner matched)
+  if (matchedProduct && (q.includes('live') || q.includes('status') || q.includes('launched'))) {
+    const rows = matrix.filter(
+      (r) =>
+        norm(r.product).includes(matchedProduct.toLowerCase()) ||
+        norm(r.product_track).includes(matchedProduct.toLowerCase())
+    );
+    const record = rows[0] || null;
+    return {
+      tier: 1,
+      askType: 5,
+      intent: 'product_status',
+      confidence: record ? confidenceForRow(record) : 'High',
+      record,
+      rows,
+      message: record
+        ? null
+        : 'Not on record — no matching product row in cache. Check Exceptions or spelling.',
       sources: ['postgres_cache'],
     };
   }

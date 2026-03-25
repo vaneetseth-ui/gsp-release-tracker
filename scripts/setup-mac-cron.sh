@@ -1,7 +1,7 @@
 #!/bin/bash
 # setup-mac-cron.sh
-# Run once to install an hourly Jira sync cron job on your Mac.
-# The job runs every hour, fetches from Jira, and pushes to Heroku.
+# Run once to install a Monday-first sync cron job on your Mac (every 30 minutes, v1.3).
+# Requires MONDAY_API_KEY, JIRA_PAT, HEROKU_URL, optional INGEST_TOKEN in the wrapper env.
 #
 # Usage:
 #   cd ~/gsp-tracker
@@ -58,8 +58,8 @@ WRAPPER_EOF
 chmod +x "$WRAPPER"
 echo "✓ Wrapper script written: $WRAPPER"
 
-# Install cron job (runs every hour at :05 past the hour)
-CRON_ENTRY="5 * * * * $WRAPPER"
+# Install cron job (v1.3 Ch.23 — every 30 minutes)
+CRON_ENTRY="*/30 * * * * $WRAPPER"
 
 # Check if already installed
 if crontab -l 2>/dev/null | grep -q "run-sync.sh"; then
@@ -69,7 +69,7 @@ else
   (crontab -l 2>/dev/null; echo "$CRON_ENTRY") | crontab -
 fi
 
-echo "✓ Cron job installed (runs every hour at :05)"
+echo "✓ Cron job installed (runs every 30 minutes)"
 echo ""
 echo "────────────────────────────────────────────────"
 echo "  Running first sync now to verify…"
@@ -81,7 +81,7 @@ echo ""
 echo "────────────────────────────────────────────────"
 echo "  Setup complete!"
 echo ""
-echo "  Cron schedule:  every hour at :05"
+echo "  Cron schedule:  every 30 minutes (*/30 * * * *)"
 echo "  Log file:       $LOG_FILE"
 echo "  View logs:      tail -f $LOG_FILE"
 echo "  Remove cron:    crontab -l | grep -v run-sync.sh | crontab -"
