@@ -9,6 +9,7 @@ import {
   matrixPartnerBucket,
   matrixPartnerSegment,
 } from '../data/matrixPartners.js';
+import { getMatrixPmDisplay, PARTNER_PM_LEGEND } from '../data/partnerPmMatrix.js';
 import { useData } from '../context/DataContext.jsx';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 
@@ -176,7 +177,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                   ))}
                   <th
                     rowSpan={2}
-                    className="px-2 py-3 text-center align-bottom border-b border-l border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 w-16"
+                    className="px-1.5 py-3 text-center align-bottom border-b border-l border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 min-w-[6.75rem] max-w-[7.5rem]"
                   >
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       PM
@@ -211,7 +212,10 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                   const rowReleases = matrixProductOrder.map((p) => getMatrixRelease(rowKey, p));
                   const firstRelease = rowReleases.find((r) => r);
                   const seLead = firstRelease?.se_lead;
-                  const pm = firstRelease?.pm;
+                  const { label: pmLabel, fromMapping: pmFromMapping } = getMatrixPmDisplay(
+                    rowKey,
+                    firstRelease
+                  );
                   const isHovered = hoveredPartner === rowKey;
                   const rowBg =
                     idx % 2 === 0 ? 'bg-white dark:bg-slate-900/40' : 'bg-slate-50/40 dark:bg-slate-800/30';
@@ -286,10 +290,25 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                         })
                       )}
 
-                      <td className="border-b border-l border-slate-100 dark:border-slate-700 px-1 py-2 text-center bg-slate-50/20 dark:bg-slate-800/30">
-                        {pm ? (
-                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                            {pm.split(' ')[0]}
+                      <td
+                        className="border-b border-l border-slate-100 dark:border-slate-700 px-1 py-2 text-center align-middle bg-slate-50/20 dark:bg-slate-800/30 min-w-[6.75rem] max-w-[7.5rem]"
+                        title={
+                          pmLabel
+                            ? pmFromMapping
+                              ? `${pmLabel} (Partner PM mapping)`
+                              : pmLabel
+                            : undefined
+                        }
+                      >
+                        {pmLabel ? (
+                          <span
+                            className={`text-[9px] sm:text-[10px] font-semibold text-slate-700 dark:text-slate-200 leading-tight block hyphens-auto ${
+                              pmFromMapping ? 'text-sky-900 dark:text-sky-200' : ''
+                            }`}
+                          >
+                            {pmFromMapping
+                              ? pmLabel
+                              : pmLabel.split(' ')[0]}
                           </span>
                         ) : (
                           <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>
@@ -312,6 +331,21 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="px-4 sm:px-5 py-3 border-t border-slate-200/50 dark:border-slate-700/60 bg-slate-50/40 dark:bg-slate-900/30">
+        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+          Partner PM mapping
+        </p>
+        <ul className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 leading-snug space-y-1 list-none m-0 p-0">
+          {PARTNER_PM_LEGEND.map((row) => (
+            <li key={row.pm}>
+              <span className="font-semibold text-slate-700 dark:text-slate-200">{row.pm}</span>
+              <span className="text-slate-400 dark:text-slate-500"> ({row.count})</span>
+              <span className="text-slate-500 dark:text-slate-400"> — {row.partners}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="px-4 sm:px-5 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/50 dark:border-slate-700/60">
