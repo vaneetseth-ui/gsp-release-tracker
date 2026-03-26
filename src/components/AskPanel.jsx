@@ -6,14 +6,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw } from 'lucide-react';
 import { api } from '../api.js';
 import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
+import { mondayCardTitle, mondayDescription, glipSummaryLine } from '../utils/releaseDisplay.js';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 import GlipNotifyButton from './GlipNotifyButton.jsx';
 
 const SUGGESTIONS = [
   "What is MCM's Nova IVA status?",
   'Which GSP Jira projects are not in Monday?',
-  'How many RingCX projects are PMO-managed with schedules?',
-  'Top 5 critical AT&T projects?',
+  'How many RCS projects does PMO manage with a schedule?',
+  'Top 5 AT&T projects',
   'Show launch dates for all projects by row',
   'Is Telus live on RCX?',
 ];
@@ -50,13 +51,13 @@ function Tier1Result({ result }) {
     const mondayUrl = resolveMondayUrl(r);
     const showRawJira = !jiraLinks.length && (r.jira_number || r.jira);
     const pmo = r.pmo_status || r.stage;
-    const showJiraStatus = r.jira_status && r.jira_status !== pmo;
+    const headline = mondayCardTitle(r);
+    const notes = mondayDescription(r);
     return (
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100">
           <div>
-            <p className="font-bold text-slate-900">{r.project_title || r.notes || r.product}</p>
-            <p className="text-xs text-slate-500">{r.partner} · {r.product}</p>
+            <p className="font-bold text-slate-900">{headline}</p>
             {result.confidence && (
               <p className="text-[10px] text-slate-400 mt-1">Confidence: {result.confidence} (cache)</p>
             )}
@@ -65,9 +66,9 @@ function Tier1Result({ result }) {
             {pmo}
           </span>
         </div>
-        {r.impact_summary && (
-          <p className="px-4 py-2 text-sm text-slate-600 border-b border-slate-100">{r.impact_summary}</p>
-        )}
+        {notes ? (
+          <p className="px-4 py-2 text-sm text-slate-600 border-b border-slate-100 whitespace-pre-wrap">{notes}</p>
+        ) : null}
         <div className="grid grid-cols-2 gap-3 p-4 text-sm">
           {r.product_readiness_date && (
             <div>
@@ -108,12 +109,6 @@ function Tier1Result({ result }) {
               <p className="font-medium">{r.se_lead}</p>
             </div>
           )}
-          {showJiraStatus && (
-            <div className="col-span-2">
-              <p className="text-xs text-slate-400 mb-0.5">Jira status</p>
-              <p className="font-medium">{r.jira_status}</p>
-            </div>
-          )}
           {(jiraLinks.length > 0 || mondayUrl || showRawJira) && (
             <div className="col-span-2">
               <p className="text-xs text-slate-400 mb-0.5">Jira / Monday</p>
@@ -131,9 +126,9 @@ function Tier1Result({ result }) {
             variant="ask"
             context={{
               question: result.query,
-              answer_summary: r.project_title || r.notes,
+              answer_summary: glipSummaryLine(r),
               partner: r.partner,
-              project_title: r.project_title,
+              project_title: headline,
               pmo_status: r.pmo_status,
               jira_number: r.jira_number,
               priority_number: r.priority_number,
@@ -168,25 +163,38 @@ function Tier2Result({ result }) {
   const label = result.matchedProduct
     ? `${result.matchedProduct}${result.matchedStage ? ` · ${result.matchedStage}` : ''}`
     : result.matchedStage || result.intent || 'All Active';
+  const msgMultiline = result.message && /\n/.test(result.message);
   return (
     <div className="space-y-2">
-      {result.message && <p className="text-sm text-slate-600">{result.message}</p>}
+      {result.message && (
+        <p className={`text-sm text-slate-600 dark:text-slate-300 ${msgMultiline ? 'whitespace-pre-wrap font-sans' : ''}`}>
+          {result.message}
+        </p>
+      )}
       {result.confidence && (
         <p className="text-[10px] text-slate-400">Confidence: {result.confidence} · postgres cache</p>
       )}
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{rows.length} results — {label}</p>
       <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white overflow-hidden shadow-sm divide-y divide-slate-100 max-h-80 overflow-y-auto">
         {rows.map((r, i) => (
-          <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50 gap-2">
+          <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-4 py-2.5 text-sm hover:bg-slate-50">
             <div className="min-w-0">
-              <span className="font-medium text-slate-800">{r.partner}</span>
-              {!result.matchedProduct && <span className="ml-2 text-xs text-slate-400">{r.product}</span>}
+              <span className="font-medium text-slate-800">{mondayCardTitle(r)}</span>
+              {result.intent === 'top_partner_priority' || result.intent === 'top_priority' ? (
+                <span className="ml-2 text-xs text-slate-500 tabular-nums">Priority #{r.priority_number ?? '—'}</span>
+              ) : null}
+              {!result.matchedProduct && result.intent !== 'top_partner_priority' && (
+                <span className="ml-2 text-xs text-slate-400">{r.product}</span>
+              )}
+              {(result.intent === 'top_partner_priority' || result.intent === 'top_priority') && mondayDescription(r) ? (
+                <p className="text-xs text-slate-500 mt-2 whitespace-pre-wrap">{mondayDescription(r)}</p>
+              ) : null}
             </div>
-            {result.intent === 'date_list' && (
+            {result.intent === 'date_list' ? (
               <span className="text-xs text-slate-500 truncate max-w-[40%]">
                 {r.gsp_launch_date || r.product_readiness_date || 'not scheduled'}
               </span>
-            )}
+            ) : null}
             <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
               {r.pmo_status || r.stage}
             </span>

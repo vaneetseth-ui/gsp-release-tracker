@@ -284,7 +284,7 @@ function baseRecord(mondayItem, provenance) {
     notes: null,
     arr_at_risk: null,
     source: 'monday',
-    monday_url: `https://monday.com/boards/${mondayItem.board_id}/pulses/${mondayItem.id}`,
+    monday_url: `https://ringcentral.monday.com/boards/${mondayItem.board_id}/pulses/${mondayItem.id}`,
     monday_item_id: String(mondayItem.id),
     data_provenance: JSON.stringify(provenance),
     is_unmanaged_jira: 0,

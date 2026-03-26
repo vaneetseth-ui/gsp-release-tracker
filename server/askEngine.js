@@ -17,6 +17,22 @@ function confidenceForRow(r) {
   return 'Medium';
 }
 
+/** PMO-managed matrix row (v1.4): not unmanaged Jira, in matrix, has a real stage */
+function isPmoManagedRow(r) {
+  const um = r.is_unmanaged_jira === 1 || r.is_unmanaged_jira === true;
+  if (um) return false;
+  if (r.include_in_matrix === 0 || r.include_in_matrix === false) return false;
+  if (r.stage === 'N/A') return false;
+  return true;
+}
+
+/** Monday priority: lower # = higher priority */
+function sortByPriorityAsc(rows) {
+  return [...rows].sort(
+    (a, b) => (Number(a.priority_number) || 999) - (Number(b.priority_number) || 999)
+  );
+}
+
 function matchPartner(q, partners) {
   const ql = norm(q);
   let best = partners.find((p) => ql.includes(norm(p)));
@@ -59,6 +75,7 @@ export function runAskQuery(rawInput, db) {
     ringcx: 'RingCX',
     'ring cx': 'RingCX',
     rcx: 'RingCX',
+    rcs: 'RingCX',
     mvp: 'MVP',
     aco: 'ACO',
     air: 'AIR',
@@ -97,26 +114,45 @@ export function runAskQuery(rawInput, db) {
     };
   }
 
-  // Type 3 — count RCX + schedule
+  // Type 3 — RCS/RCX count + schedule URL (v1.4: RingCX bucket, schedule link, PMO-managed)
   if (
     (q.includes('how many') || q.includes('count')) &&
-    (q.includes('rcx') || q.includes('ringcx') || q.includes('ring cx') || q.includes('contact center'))
+    (q.includes('rcx') ||
+      q.includes('rcs') ||
+      q.includes('ringcx') ||
+      q.includes('ring cx') ||
+      q.includes('contact center'))
   ) {
+    const hasScheduleUrl = (r) => !!(r.schedule_url && String(r.schedule_url).trim());
     const rows = matrix.filter((r) => {
+      if (!isPmoManagedRow(r)) return false;
       const b = productBucketForProduct(r.product_track || r.product);
-      return b === 'RingCX' && (r.gsp_launch_date || r.product_readiness_date || r.target_date);
+      return b === 'RingCX' && hasScheduleUrl(r);
     });
+    const sorted = sortByPriorityAsc(rows);
+    const topRows = sorted.slice(0, 5);
+    let message;
+    if (rows.length === 0) {
+      message =
+        'No matches found — no PMO-managed RingCX-bucket rows with an active schedule link on record.';
+    } else {
+      const lines = topRows.map((r, i) => {
+        const name = `${r.partner} — ${r.product}`;
+        const st = r.pmo_status || r.stage;
+        const launch = r.gsp_launch_date || r.product_readiness_date || 'TBD';
+        return `${i + 1}. ${name}: ${st}. Schedule: Yes. Launch: ${launch}.`;
+      });
+      message = `PMO manages ${rows.length} RingCX-bucket project(s) with active schedules.\nTop projects by priority:\n${lines.join('\n')}`;
+    }
     return {
       tier: 2,
       askType: 3,
       intent: 'count_scheduled_rcx',
       confidence: 'High',
       count: rows.length,
-      rows: rows.slice(0, 50),
-      message:
-        rows.length === 0
-          ? 'No matches found — no RingCX-bucket rows with schedule dates on record.'
-          : `${rows.length} PMO-managed RingCX-bucket release(s) with schedule data.`,
+      rows: topRows,
+      topRows,
+      message,
       sources: ['postgres_cache'],
     };
   }
@@ -137,23 +173,29 @@ export function runAskQuery(rawInput, db) {
     };
   }
 
-  // Type 2 — top N critical by partner + priority
-  if (q.includes('top ') && (q.includes('critical') || q.includes('priority'))) {
+  // Type 2 — top N by Monday priority (1 = highest); optional partner (e.g. Top 5 AT&T projects)
+  if (q.includes('top ') && (matchedPartner || q.includes('critical') || q.includes('priority'))) {
     const n = parseInt(/\btop\s+(\d+)\b/.exec(q)?.[1] || '5', 10) || 5;
-    let pool = matrix;
-    if (matchedPartner) pool = pool.filter((r) => norm(r.partner).includes(norm(matchedPartner)) || norm(matchedPartner).includes(norm(r.partner)));
-    pool = [...pool].sort((a, b) => (Number(b.priority_number) || 0) - (Number(a.priority_number) || 0));
+    let pool = matrix.filter(isPmoManagedRow);
+    if (matchedPartner) {
+      pool = pool.filter(
+        (r) => norm(r.partner).includes(norm(matchedPartner)) || norm(matchedPartner).includes(norm(r.partner))
+      );
+    }
+    pool = sortByPriorityAsc(pool);
     const rows = pool.slice(0, n);
+    const label = matchedPartner ? `${matchedPartner} — top ${rows.length} by priority` : `Top ${rows.length} by Monday priority #`;
     return {
       tier: 2,
       askType: 2,
-      intent: 'top_priority',
+      intent: matchedPartner ? 'top_partner_priority' : 'top_priority',
       confidence: 'High',
       rows,
+      matchedPartner: matchedPartner || undefined,
       message:
         rows.length === 0
           ? 'No matches found — try another partner or check Exceptions for data gaps.'
-          : `Top ${rows.length} by Monday priority #.`,
+          : `${label} (lower # = higher priority).`,
       sources: ['postgres_cache'],
     };
   }

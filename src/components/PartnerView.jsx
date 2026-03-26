@@ -1,11 +1,12 @@
 /**
- * PartnerView — v1.2 blended descriptive cards (Monday + Jira), SE/PM only, Glip notify
+ * PartnerView — v1.4 Monday-native cards (Jira enrichment stored but not shown as title/body)
  */
 import React from 'react';
 import { X, User, Briefcase, Calendar, CheckCircle2 } from 'lucide-react';
 import { STAGES } from '../data/stages.js';
 import { OTHER_MATRIX_BUCKET } from '../data/matrixPartners.js';
 import { useData } from '../context/DataContext.jsx';
+import { mondayCardTitle, mondayDescription } from '../utils/releaseDisplay.js';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 import GlipNotifyButton from './GlipNotifyButton.jsx';
@@ -28,10 +29,10 @@ function ReleaseCard({ release, computeGapsForRelease }) {
   const jl = release.jiraLinks || [];
   const hasToolLinks = jl.length > 0 || !!release.mondayUrl;
   const showRawJira = !jl.length && release.jira;
-  const title = release.project_title || release.notes || release.product;
+  const title = mondayCardTitle(release);
+  const description = mondayDescription(release);
   const pmo = release.pmo_status || release.stage;
   const stageStyle = STAGES[release.stage] || STAGES.Planned;
-  const showJiraStatus = release.jira_status && release.jira_status !== pmo;
   const gaps = computeGapsForRelease(release).filter((g) => g.severity === 'Critical' || g.severity === 'High');
 
   return (
@@ -58,17 +59,24 @@ function ReleaseCard({ release, computeGapsForRelease }) {
             >
               {pmo}
             </span>
-            {showJiraStatus && (
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Jira: <span className="font-semibold text-slate-700 dark:text-slate-200">{release.jira_status}</span>
-              </span>
-            )}
           </div>
         </div>
       </div>
 
-      {release.impact_summary && (
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{release.impact_summary}</p>
+      {description ? (
+        <div
+          className={`text-sm text-slate-700 dark:text-slate-200 leading-relaxed ${
+            release.commentStale ? 'bg-amber-50/80 dark:bg-amber-950/30 rounded-lg px-3 py-2 ring-1 ring-amber-200/80' : ''
+          }`}
+        >
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Monday notes</span>
+          <p className="mt-1 whitespace-pre-wrap">{description}</p>
+          {release.commentStale && (
+            <p className="text-xs text-amber-800 dark:text-amber-200 font-semibold mt-1">Stale (&gt; 1 week since update)</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400 italic">No Monday notes on this item.</p>
       )}
 
       <div className="flex flex-wrap gap-4 text-sm border-t border-slate-100 dark:border-slate-700 pt-3">
@@ -110,20 +118,6 @@ function ReleaseCard({ release, computeGapsForRelease }) {
           <JiraMondayLinks jiraLinks={jl} mondayUrl={release.mondayUrl} compact />
           {showRawJira && (
             <span className="text-sm text-slate-600 dark:text-slate-300 font-mono">{release.jira}</span>
-          )}
-        </div>
-      )}
-
-      {release.monday_comment && (
-        <div
-          className={`text-sm text-slate-700 dark:text-slate-200 border-t border-slate-100 dark:border-slate-700 pt-3 ${
-            release.commentStale ? 'bg-amber-50/80 dark:bg-amber-950/30 rounded-lg px-3 py-2 ring-1 ring-amber-200/80' : ''
-          }`}
-        >
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Comment</span>
-          <p className="mt-1 whitespace-pre-wrap">{release.monday_comment}</p>
-          {release.commentStale && (
-            <p className="text-xs text-amber-800 dark:text-amber-200 font-semibold mt-1">Stale (&gt; 1 week since update)</p>
           )}
         </div>
       )}

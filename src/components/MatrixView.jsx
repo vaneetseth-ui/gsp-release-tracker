@@ -11,6 +11,7 @@ import {
 } from '../data/matrixPartners.js';
 import { getMatrixPmDisplay, PARTNER_PM_LEGEND } from '../data/partnerPmMatrix.js';
 import { useData } from '../context/DataContext.jsx';
+import { matrixCellTooltip } from '../utils/releaseDisplay.js';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 
 const AREA_HEADER_TINT = [
@@ -39,7 +40,7 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
         isNA ? '' : 'cursor-pointer hover:bg-sky-50/70 dark:hover:bg-sky-950/40'
       } ${tdClass}`}
       onClick={() => !isNA && onClick(release)}
-      title={titleProp ?? release.project_title ?? release.notes ?? ''}
+      title={titleProp ?? matrixCellTooltip(release)}
     >
       <div className="inline-flex flex-col items-center gap-0.5">
         <span
@@ -254,14 +255,14 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                           const release = getMatrixRelease(rowKey, p);
                           let cellTitle;
                           if (release) {
-                            const base = release.project_title || release.notes || '';
+                            const base = matrixCellTooltip(release);
                             if (isOtherRow) {
                               const n = matrixReleases.filter(
                                 (r) => r.product === p && matrixPartnerBucket(r.partner) == null
                               ).length;
                               cellTitle =
                                 n > 1
-                                  ? `${base ? `${base}\n` : ''}Representative of ${n} GSP rows (by priority).`
+                                  ? matrixCellTooltip(release, `Representative of ${n} GSP rows (by priority).`)
                                   : base;
                             } else {
                               const n = matrixReleases.filter(
@@ -269,7 +270,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                               ).length;
                               cellTitle =
                                 n > 1
-                                  ? `${base ? `${base}\n` : ''}${n} rows (showing highest priority).`
+                                  ? matrixCellTooltip(release, `${n} rows (showing highest priority).`)
                                   : base;
                             }
                           }
