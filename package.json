@@ -24,6 +24,9 @@
     "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js",
     "test": "vitest run",
     "test:nl-smoke": "node scripts/smoke-nl-queries.mjs",
+    "db:monday-status": "node scripts/monday-data-status.mjs",
+    "db:purge-jira": "node scripts/db-purge-jira.mjs",
+    "db:purge-jira:dry": "node scripts/db-purge-jira.mjs --dry-run",
     "heroku:setup:glip": "bash scripts/heroku-setup-glip.sh"
   },
   "dependencies": {
