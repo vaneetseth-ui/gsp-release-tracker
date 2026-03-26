@@ -23,6 +23,7 @@
     "sync:confluence:merge-push": "node scripts/confluence-local-merge-push.mjs",
     "sync:all": "node scripts/sync-local.js && node scripts/sync-confluence.js",
     "test": "vitest run",
+    "test:nl-smoke": "node scripts/smoke-nl-queries.mjs",
     "heroku:setup:glip": "bash scripts/heroku-setup-glip.sh"
   },
   "dependencies": {
