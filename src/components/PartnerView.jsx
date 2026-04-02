@@ -36,7 +36,7 @@ function ReleaseCard({ release, computeGapsForRelease }) {
   const gaps = computeGapsForRelease(release).filter((g) => g.severity === 'Critical' || g.severity === 'High');
 
   return (
-    <div className="rounded-[24px] p-4 space-y-3 transition-all ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white/90 dark:bg-slate-900/85 shadow-soft">
+    <div className="rounded-[24px] p-4 space-y-3 transition-all ring-1 ring-slate-200 bg-white shadow-soft">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 min-w-0">
           <h3 className="font-bold text-base text-slate-900 dark:text-white leading-snug">{title}</h3>
@@ -160,31 +160,31 @@ export default function PartnerView({ partner, onClose }) {
   });
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-slate-50/90 to-white dark:from-slate-950 dark:to-slate-950">
-      <div className="hero-sheen flex items-start justify-between gap-3 px-5 py-5 flex-shrink-0 border-b border-white/10 backdrop-blur-sm">
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex items-start justify-between gap-3 px-5 py-5 flex-shrink-0 border-b border-slate-200 bg-slate-50">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bud-teal/90">Partner Focus</p>
-          <h2 className="mt-1 text-2xl font-display font-bold text-white tracking-tight">{partner}</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-bud-teal">Partner Focus</p>
+          <h2 className="mt-1 text-2xl font-display font-bold text-slate-950 tracking-tight">{partner}</h2>
           {partner === OTHER_MATRIX_BUCKET && (
-            <p className="text-xs text-slate-300 mt-1 font-medium leading-snug">
+            <p className="text-xs text-slate-500 mt-1 font-medium leading-snug">
               Partners outside the strategic matrix rows — listed by product below.
             </p>
           )}
-          <p className="text-sm text-slate-300 mt-2 font-semibold leading-relaxed">
+          <p className="text-sm text-slate-600 mt-2 font-semibold leading-relaxed">
             {activeReleases.length} active · {naCount} n/a
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+          className="p-2 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-white transition-colors shrink-0"
           aria-label="Close panel"
         >
           <X size={20} strokeWidth={2} />
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 px-5 py-3 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-800 bg-white/60 dark:bg-slate-950/80">
+      <div className="flex flex-wrap gap-2 px-5 py-3 flex-shrink-0 border-b border-slate-200 bg-white">
         {Object.entries(stageCounts).map(([stage, count]) => (
           <span
             key={stage}

@@ -96,7 +96,7 @@ export default function ExceptionPanel({ onSelectPartner }) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="px-5 py-5 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-800/80">
+      <div className="px-5 py-5 flex-shrink-0 border-b border-slate-200">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-bud-orange">Quality Control</p>
         <h2 className="mt-1 text-xl font-display font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2 tracking-tight">
           <ClipboardList size={20} className="text-bud-orange shrink-0" strokeWidth={2.25} />
@@ -125,7 +125,7 @@ export default function ExceptionPanel({ onSelectPartner }) {
             className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
               severityFilter === sev
                 ? 'bg-bud-navy text-white shadow-sm'
-                : 'bg-white/90 dark:bg-slate-900 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200/80 dark:ring-slate-700'
+                : 'bg-white text-slate-600 ring-1 ring-slate-200'
             }`}
             onClick={() => setSeverityFilter(sev)}
           >

@@ -379,11 +379,11 @@ export default function AskPanel() {
 
       <div className="flex items-center justify-between px-5 sm:px-6 py-5 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-800/80">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-bud-purple dark:text-bud-teal">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-bud-teal">
             PMO Bud AI Copilot
           </p>
           <h2 className="mt-1 text-xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
-            <Sparkles size={18} className="text-bud-purple dark:text-bud-teal shrink-0" strokeWidth={2} />
+            <Sparkles size={18} className="text-bud-teal shrink-0" strokeWidth={2} />
             Ask
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-semibold max-w-xl">
@@ -406,9 +406,9 @@ export default function AskPanel() {
 
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-8 py-10">
-            <div className="relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-gradient-to-br from-white via-white to-slate-100/80 px-6 py-8 text-center shadow-soft dark:border-slate-700/60 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 max-w-2xl">
-              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-bud-teal via-bud-purple to-bud-orange" />
-              <div className="w-16 h-16 rounded-[22px] bg-bud-navy ring-1 ring-white/10 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-slate-950/20">
+            <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white px-6 py-8 text-center shadow-soft max-w-2xl">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-bud-teal to-bud-purple" />
+              <div className="w-16 h-16 rounded-[22px] bg-bud-navy ring-1 ring-slate-200 flex items-center justify-center mx-auto mb-5 shadow-sm">
                 <Sparkles size={24} className="text-bud-teal" strokeWidth={1.6} />
               </div>
               <p className="text-xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
@@ -424,7 +424,7 @@ export default function AskPanel() {
                   key={i}
                   type="button"
                   onClick={() => handleSubmit(s)}
-                  className="text-left px-4 py-3 rounded-2xl bg-white/90 dark:bg-slate-900/80 ring-1 ring-slate-200/70 dark:ring-slate-700 hover:ring-bud-teal/40 hover:bg-cyan-50/40 dark:hover:bg-slate-800 transition-all text-xs text-slate-600 dark:text-slate-300 leading-snug font-medium shadow-sm"
+                  className="text-left px-4 py-3 rounded-2xl bg-white ring-1 ring-slate-200 hover:ring-bud-teal/40 hover:bg-cyan-50/30 transition-all text-xs text-slate-700 leading-snug font-medium shadow-sm"
                 >
                   {s}
                 </button>
@@ -452,8 +452,8 @@ export default function AskPanel() {
       </div>
 
       {/* Input bar */}
-      <div className="flex-shrink-0 px-5 sm:px-6 py-4 bg-white/80 dark:bg-slate-900/85 backdrop-blur-sm border-t border-slate-100 dark:border-slate-700">
-        <div className="flex gap-2 items-end bg-slate-50/85 dark:bg-slate-900/80 rounded-[22px] px-4 py-2.5 ring-1 ring-slate-200/70 dark:ring-slate-700 focus-within:ring-2 focus-within:ring-bud-teal/35 focus-within:bg-white dark:focus-within:bg-slate-900 transition-all">
+      <div className="flex-shrink-0 px-5 sm:px-6 py-4 bg-white border-t border-slate-200">
+        <div className="flex gap-2 items-end bg-slate-50 rounded-[22px] px-4 py-2.5 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-bud-teal/35 focus-within:bg-white transition-all">
           <textarea
             ref={inputRef}
             rows={1}

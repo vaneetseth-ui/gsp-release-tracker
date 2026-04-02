@@ -16,11 +16,11 @@ export default {
         },
         bud: {
           navy: '#0a0e27',
-          teal: '#00d9ff',
-          purple: '#9d4edd',
-          orange: '#ff6b35',
-          green: '#52b788',
-          mist: '#e7eef9',
+          teal: '#0ea5c6',
+          purple: '#7c3aed',
+          orange: '#ea580c',
+          green: '#059669',
+          mist: '#f6f8fb',
         },
         surface: {
           page: '#F8FAFC',

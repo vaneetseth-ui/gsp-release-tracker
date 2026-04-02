@@ -69,7 +69,7 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
 function SummaryBar({ summary }) {
   const stageOrder = ['GA', 'Beta', 'EAP', 'Dev', 'Planned', 'OnHold'];
   return (
-    <div className="flex flex-wrap gap-2 items-center px-5 py-4 border-b border-slate-100/80 dark:border-slate-800/80">
+    <div className="flex flex-wrap gap-2 items-center px-5 py-4 border-b border-slate-200">
       <div className="mr-2">
         <span className="text-[11px] font-semibold text-bud-purple dark:text-bud-teal uppercase tracking-[0.24em]">
           Matrix Overview
@@ -120,7 +120,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
     <div className="flex flex-col h-full min-h-0">
       <SummaryBar summary={summary} />
 
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm text-slate-500 dark:text-slate-400 border-b border-slate-100">
         <span className="font-bold text-slate-500 dark:text-slate-400">Legend</span>
         {Object.entries(STAGES).map(
           ([key, s]) =>
@@ -156,13 +156,13 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
           </div>
         )}
         {matrixReleases.length > 0 && (
-          <div className="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white/85 shadow-soft ring-1 ring-white/60 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/55 dark:ring-slate-700/40">
+          <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-soft">
             <table className="w-full text-[0.95rem] sm:text-base border-collapse">
               <thead>
                 <tr>
                   <th
                     rowSpan={2}
-                    className="sticky left-0 z-30 w-[11rem] min-w-[11rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 py-3 text-left align-bottom border-b border-r border-slate-100 dark:border-slate-700"
+                    className="sticky left-0 z-30 w-[11rem] min-w-[11rem] bg-white px-3 py-3 text-left align-bottom border-b border-r border-slate-200"
                   >
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       Partner
@@ -172,7 +172,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     <th
                       key={g.area || g.bucket}
                       colSpan={g.products.length}
-                      className={`px-2 py-2 text-center align-middle border-b border-slate-100 dark:border-slate-700 ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} dark:opacity-95 dark:ring-1 dark:ring-slate-600/30`}
+                      className={`px-2 py-2 text-center align-middle border-b border-slate-200 ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]}`}
                     >
                       <span className="text-[10px] font-semibold leading-snug tracking-wide">
                         {g.bucket || g.area}
@@ -181,7 +181,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                   ))}
                   <th
                     rowSpan={2}
-                    className="px-1.5 py-3 text-center align-bottom border-b border-l border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 min-w-[6.75rem] max-w-[7.5rem]"
+                    className="px-1.5 py-3 text-center align-bottom border-b border-l border-slate-200 bg-slate-50 min-w-[6.75rem] max-w-[7.5rem]"
                   >
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       PM
@@ -189,7 +189,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                   </th>
                   <th
                     rowSpan={2}
-                    className="px-2 py-3 text-center align-bottom border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 w-16"
+                    className="px-2 py-3 text-center align-bottom border-b border-slate-200 bg-slate-50 w-16"
                   >
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       SE
@@ -201,7 +201,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     g.products.map((p, pi) => (
                       <th
                         key={p}
-                        className={`px-1.5 py-2 text-center align-middle border-b border-slate-100 dark:border-slate-700 max-w-[4.5rem] ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} dark:opacity-95 ${pi === 0 ? 'border-l border-l-slate-200/60 dark:border-l-slate-600' : ''}`}
+                        className={`px-1.5 py-2 text-center align-middle border-b border-slate-200 max-w-[4.5rem] ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} ${pi === 0 ? 'border-l border-l-slate-200' : ''}`}
                       >
                         <span className="text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight block hyphens-auto">
                           {p}

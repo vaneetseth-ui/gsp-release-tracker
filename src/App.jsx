@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Clock,
   MessageSquare,
-  ChevronRight,
   RefreshCw,
   CheckCircle,
   Sun,
@@ -24,9 +23,9 @@ import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
 import AskPanel        from './components/AskPanel.jsx';
 import TimelineFilter  from './components/TimelineFilter.jsx';
+import BuddAiMark from './components/BuddAiMark.jsx';
 import { useData } from './context/DataContext.jsx';
 import { useTheme } from './context/ThemeContext.jsx';
-import buddAiMark from './assets/pmo-bud-hexagon-brain.png';
 
 const TABS = [
   { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language on cached data' },
@@ -38,20 +37,20 @@ const TABS = [
 function StatCard({ icon: Icon, label, value, tone = 'default' }) {
   const toneClass =
     {
-      primary: 'border-bud-teal/30 bg-white/10 text-white',
-      accent: 'border-bud-purple/30 bg-white/8 text-white',
-      success: 'border-bud-green/30 bg-white/8 text-white',
-      warning: 'border-bud-orange/30 bg-white/8 text-white',
-      default: 'border-white/12 bg-white/8 text-white',
-    }[tone] || 'border-white/12 bg-white/8 text-white';
+      primary: 'border-cyan-200 bg-cyan-50',
+      accent: 'border-violet-200 bg-violet-50',
+      success: 'border-emerald-200 bg-emerald-50',
+      warning: 'border-orange-200 bg-orange-50',
+      default: 'border-slate-200 bg-white',
+    }[tone] || 'border-slate-200 bg-white';
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 shadow-lg shadow-slate-950/10 ${toneClass}`}>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">
+    <div className={`rounded-2xl border px-4 py-3 shadow-sm ${toneClass}`}>
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
         <Icon size={14} strokeWidth={2} className="text-bud-teal" />
         {label}
       </div>
-      <div className="mt-2 text-2xl font-display font-bold tracking-tight">{value}</div>
+      <div className="mt-2 text-2xl font-display font-bold tracking-tight text-slate-950">{value}</div>
     </div>
   );
 }
@@ -65,11 +64,11 @@ function ActionButton({ children, onClick, disabled, title, primary = false, ico
       disabled={disabled}
       className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
         primary
-          ? 'bg-bud-teal text-bud-navy hover:bg-[#67e7ff] shadow-lg shadow-cyan-950/20'
-          : 'bg-white/8 text-white ring-1 ring-white/12 hover:bg-white/14'
+          ? 'bg-bud-navy text-white hover:bg-slate-800 shadow-sm'
+          : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
       }`}
     >
-      {Icon ? <Icon size={16} strokeWidth={2} className={primary ? 'text-bud-navy' : 'text-bud-teal'} /> : null}
+      {Icon ? <Icon size={16} strokeWidth={2} className="text-bud-teal" /> : null}
       {children}
     </button>
   );
@@ -83,35 +82,37 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
 
   return (
     <header className="flex-shrink-0 px-3 pt-3 sm:px-4 sm:pt-4">
-      <div className="hero-sheen relative overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_-42px_rgba(10,14,39,0.75)]">
-        <div className="pointer-events-none absolute -right-8 top-0 hidden h-full w-[22rem] items-center justify-center xl:flex">
-          <img src={buddAiMark} alt="" className="h-72 w-72 object-contain opacity-20 saturate-125" />
-        </div>
-
-        <div className="relative grid gap-5 px-5 py-5 sm:px-7 sm:py-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-[22px] border border-white/10 bg-white/6 p-2 shadow-lg shadow-slate-950/25">
-                <img
-                  src={buddAiMark}
-                  alt="PMO Bud AI"
-                  className="h-14 w-14 rounded-2xl object-cover sm:h-16 sm:w-16"
-                />
-              </div>
+      <div className="hero-sheen relative overflow-hidden rounded-[30px] border border-slate-800/60 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]">
+        <div className="relative grid gap-4 px-5 py-5 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-bud-teal/90">
-                  PMO Bud AI Workspace
+                <div className="mb-3 flex items-center gap-3">
+                  <BuddAiMark compact />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Powered By</p>
+                    <p className="font-display text-lg font-bold text-white">PMO <span className="text-bud-teal">BuddAI</span></p>
+                  </div>
                 </div>
-                <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-[2rem]">
                   GSP Release Tracker
                 </h1>
-                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-300 sm:text-base">
-                  Monday-first command center for strategic partner delivery, release readiness, and operational visibility.
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-300 sm:text-base">
+                  Clear release visibility for strategic partners, with Monday as the operational source of truth.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 p-3 text-white transition-colors hover:bg-white/12"
+                aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              >
+                {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard icon={Activity} label="Active Releases" value={summary.total || 0} tone="primary" />
               <StatCard icon={CalendarRange} label="Schedules Linked" value={summary.withSchedule || 0} tone="success" />
               <StatCard icon={CheckCircle} label="GA Live" value={summary.byStage.GA || 0} tone="accent" />
@@ -119,33 +120,20 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
             </div>
           </div>
 
-          <div className="glass-panel rounded-[26px] border border-white/10 p-4 text-white shadow-2xl shadow-slate-950/20">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-bud-teal/90">
-                  Runtime Control
-                </p>
-                <p className="mt-2 text-lg font-display font-bold">Live portfolio status</p>
-              </div>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/8 p-3 text-white transition-colors hover:bg-white/14"
-                aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              >
-                {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
-              </button>
-            </div>
+          <div className="rounded-[26px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-lg shadow-slate-950/10">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bud-teal">
+              Runtime Control
+            </p>
+            <p className="mt-2 text-lg font-display font-bold text-slate-950">Portfolio sync</p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Source of truth</p>
-                <p className="mt-2 text-base font-semibold text-white">Monday production sync</p>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source of truth</p>
+                <p className="mt-1 text-base font-semibold text-slate-950">Monday production sync</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Last sync</p>
-                <p className="mt-2 text-base font-semibold text-white">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
+                <p className="mt-1 text-base font-semibold text-slate-950">
                   {syncStatus.lastSync || 'Waiting for health check'}
                 </p>
               </div>
@@ -171,17 +159,17 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
               </ActionButton>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-300">
-              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5">GA {summary.byStage.GA || 0}</span>
-              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5">Beta {summary.byStage.Beta || 0}</span>
-              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5">EAP {summary.byStage.EAP || 0}</span>
-              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5">Dev {summary.byStage.Dev || 0}</span>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">GA {summary.byStage.GA || 0}</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Beta {summary.byStage.Beta || 0}</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">EAP {summary.byStage.EAP || 0}</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Dev {summary.byStage.Dev || 0}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <nav className="mt-3 flex gap-2 overflow-x-auto rounded-[24px] border border-white/10 bg-white/45 p-2 shadow-soft backdrop-blur-xl dark:bg-slate-950/40">
+      <nav className="mt-3 flex gap-2 overflow-x-auto rounded-[24px] border border-slate-200 bg-white p-2 shadow-soft">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -192,11 +180,11 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
               onClick={() => onTabChange(tab.id)}
               className={`group flex min-w-[180px] flex-1 items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-all ${
                 isActive
-                  ? 'bg-bud-navy text-white shadow-lg shadow-slate-950/20'
-                  : 'text-slate-600 hover:bg-white/75 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900/70 dark:hover:text-white'
+                  ? 'bg-bud-navy text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-900/5 dark:bg-white/5'}`}>
+              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
                 <Icon size={18} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
               </span>
               <span className="min-w-0">
@@ -208,7 +196,7 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
                     </span>
                   )}
                 </span>
-                <span className={`mt-0.5 block text-xs ${isActive ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
+                <span className={`mt-0.5 block text-xs ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
                   {tab.desc}
                 </span>
               </span>
@@ -254,6 +242,10 @@ export default function App() {
   useEffect(() => {
     fetchHealth().then(() => setSyncStatus((s) => ({ ...s, checking: false })));
   }, [fetchHealth]);
+
+  useEffect(() => {
+    setSelectedPartner(null);
+  }, [activeTab]);
 
   const handleSelectPartner = useCallback((partner) => {
     setSelectedPartner(partner);
@@ -315,9 +307,8 @@ export default function App() {
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-transparent text-base">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-10%] top-[-18%] h-80 w-80 rounded-full bg-bud-teal/12 blur-3xl" />
-        <div className="absolute right-[-8%] top-[8%] h-72 w-72 rounded-full bg-bud-purple/18 blur-3xl" />
-        <div className="absolute bottom-[-15%] left-[20%] h-72 w-72 rounded-full bg-bud-green/10 blur-3xl" />
+        <div className="absolute left-[-10%] top-[-18%] h-80 w-80 rounded-full bg-bud-teal/8 blur-3xl" />
+        <div className="absolute right-[-8%] top-[8%] h-72 w-72 rounded-full bg-bud-purple/8 blur-3xl" />
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -332,7 +323,7 @@ export default function App() {
         <TimelineFilter />
 
         <div className="flex flex-1 gap-3 overflow-hidden px-3 pb-3 sm:px-4 sm:pb-4">
-          <main className="glass-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-white/20 shadow-[0_18px_65px_-30px_rgba(15,23,42,0.45)]">
+          <main className="glass-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.3)]">
             {activeTab === 'ask' && <AskPanel />}
             {activeTab === 'matrix' && (
               <MatrixView
@@ -349,10 +340,8 @@ export default function App() {
           </main>
 
           <div
-            className={`glass-panel flex-shrink-0 overflow-hidden rounded-[28px] border shadow-panel transition-all duration-300 ease-out ${
-              panelOpen
-                ? 'w-full border-white/20 sm:w-96 md:w-[420px]'
-                : 'w-0 border-transparent shadow-none'
+            className={`glass-panel hidden flex-shrink-0 overflow-hidden rounded-[28px] border border-slate-200 shadow-panel transition-all duration-300 ease-out lg:block ${
+              panelOpen ? 'w-[420px]' : 'w-0 border-transparent shadow-none'
             }`}
           >
             {panelOpen && (
@@ -364,7 +353,18 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mx-3 mb-3 flex flex-shrink-0 flex-wrap items-center justify-between gap-2 rounded-[22px] border border-white/15 bg-slate-950/75 px-4 py-3 text-sm text-slate-300 shadow-lg shadow-slate-950/25 backdrop-blur-xl sm:mx-4 sm:mb-4">
+        {panelOpen && (
+          <div className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden">
+            <div className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+              <PartnerView
+                partner={selectedPartner}
+                onClose={() => setSelectedPartner(null)}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="mx-3 mb-3 flex flex-shrink-0 flex-wrap items-center justify-between gap-2 rounded-[22px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-soft sm:mx-4 sm:mb-4">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-2">
               <span
@@ -378,7 +378,7 @@ export default function App() {
                         : 'bg-bud-orange ring-4 ring-orange-400/15'
                 }`}
               />
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-slate-900">
                 {releasesLoading
                   ? 'Loading releases…'
                   : dataStatus === 'live'
@@ -388,18 +388,11 @@ export default function App() {
                       : 'No release rows from API'}
               </span>
             </span>
-            <span className="hidden text-slate-400 sm:inline">
+            <span className="hidden text-slate-500 sm:inline">
               Monday · Jira · Confluence · Sheets · Postgres
             </span>
           </div>
-          <span className="text-slate-300">
-            {panelOpen && (
-              <span className="flex items-center gap-1">
-                <ChevronRight size={12} />
-                {selectedPartner}
-              </span>
-            )}
-          </span>
+          {panelOpen && <span className="hidden lg:inline text-slate-500">{selectedPartner}</span>}
         </div>
       </div>
     </div>
