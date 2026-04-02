@@ -157,9 +157,10 @@ export default function ChangelogFeed({ onSelectPartner }) {
 
   return (
     <div className="flex flex-col h-full min-h-0 text-base">
-      <div className="px-5 py-4 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-700/80">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2 tracking-tight">
-          <Clock size={19} className="text-sky-500 dark:text-sky-400 shrink-0" strokeWidth={2} />
+      <div className="px-5 py-5 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-800/80">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-bud-teal">Change Narrative</p>
+        <h2 className="mt-1 text-xl font-display font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2 tracking-tight">
+          <Clock size={19} className="text-bud-teal shrink-0" strokeWidth={2} />
           Changelog
           <span className="ml-auto text-sm font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
             {loading ? '…' : `${items.length} entries`}
@@ -184,7 +185,7 @@ export default function ChangelogFeed({ onSelectPartner }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             disabled={loading || !!error}
-            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 ring-1 ring-slate-200/80 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-200/80 dark:focus:ring-sky-600 placeholder:text-slate-400 disabled:opacity-50"
+            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-white/90 dark:bg-slate-900 text-slate-800 dark:text-slate-100 ring-1 ring-slate-200/80 dark:ring-slate-700 focus:outline-none focus:ring-2 focus:ring-bud-teal/35 placeholder:text-slate-400 disabled:opacity-50"
           />
         </div>
       </div>

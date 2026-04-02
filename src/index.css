@@ -1,8 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+    --bud-navy: #0a0e27;
+    --bud-teal: #00d9ff;
+    --bud-purple: #9d4edd;
+    --bud-orange: #ff6b35;
+    --bud-green: #52b788;
+    --bud-mist: #e7eef9;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -17,16 +29,44 @@
 
   body {
     @apply font-sans text-slate-800 dark:text-slate-100 antialiased;
-    background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 45%, #eef2f7 100%);
+    background:
+      radial-gradient(circle at top left, rgba(0, 217, 255, 0.2) 0, rgba(0, 217, 255, 0) 28%),
+      radial-gradient(circle at top right, rgba(157, 78, 221, 0.18) 0, rgba(157, 78, 221, 0) 34%),
+      linear-gradient(180deg, #eef5ff 0%, #e8eef9 48%, #f5f8fc 100%);
     min-height: 100vh;
+    position: relative;
   }
 
   html.dark body {
-    background: linear-gradient(165deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+    color-scheme: dark;
+    background:
+      radial-gradient(circle at top left, rgba(0, 217, 255, 0.12) 0, rgba(0, 217, 255, 0) 28%),
+      radial-gradient(circle at top right, rgba(157, 78, 221, 0.18) 0, rgba(157, 78, 221, 0) 30%),
+      radial-gradient(circle at 50% 100%, rgba(82, 183, 136, 0.1) 0, rgba(82, 183, 136, 0) 26%),
+      linear-gradient(180deg, #070a1b 0%, #0a0e27 45%, #101833 100%);
   }
 
   ::selection {
     @apply bg-sky-100 text-slate-900 dark:bg-sky-900 dark:text-sky-100;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 78%);
+    z-index: 0;
+  }
+
+  #root {
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
   }
 }
 
@@ -51,5 +91,21 @@
   }
   html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #475569;
+  }
+
+  .glass-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.72));
+    backdrop-filter: blur(22px);
+  }
+
+  html.dark .glass-panel {
+    background: linear-gradient(180deg, rgba(12, 18, 42, 0.78), rgba(10, 14, 39, 0.58));
+  }
+
+  .hero-sheen {
+    background:
+      radial-gradient(circle at top left, rgba(0, 217, 255, 0.22), transparent 34%),
+      radial-gradient(circle at 78% 22%, rgba(157, 78, 221, 0.32), transparent 28%),
+      linear-gradient(135deg, rgba(10, 14, 39, 0.96), rgba(17, 24, 49, 0.9));
   }
 }

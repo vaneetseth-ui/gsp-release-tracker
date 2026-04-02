@@ -6,12 +6,21 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Space Grotesk"', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       colors: {
         rc: {
           blue:   '#0F4C9E',
           navy:   '#0A2D5E',
           orange: '#FF6600',
+        },
+        bud: {
+          navy: '#0a0e27',
+          teal: '#00d9ff',
+          purple: '#9d4edd',
+          orange: '#ff6b35',
+          green: '#52b788',
+          mist: '#e7eef9',
         },
         surface: {
           page: '#F8FAFC',

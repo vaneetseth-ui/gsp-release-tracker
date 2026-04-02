@@ -301,10 +301,10 @@ function Message({ msg }) {
   if (msg.role === 'user') {
     return (
       <div className="flex justify-end gap-2 items-start">
-        <div className="max-w-[75%] bg-rc-navy text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm">
+        <div className="max-w-[75%] bg-bud-navy text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm shadow-lg shadow-slate-950/15">
           {msg.text}
         </div>
-        <div className="w-7 h-7 rounded-full bg-rc-orange flex items-center justify-center flex-shrink-0 mt-0.5">
+        <div className="w-7 h-7 rounded-full bg-bud-orange flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
           <User size={13} className="text-white" />
         </div>
       </div>
@@ -325,8 +325,8 @@ function Message({ msg }) {
   // assistant
   return (
     <div className="flex gap-2 items-start">
-      <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Bot size={13} className="text-white" />
+      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-bud-teal to-bud-purple flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+        <Bot size={13} className="text-bud-navy" />
       </div>
       <div className="max-w-[90%] space-y-1">
         <ResultCard result={msg.result} />
@@ -377,21 +377,24 @@ export default function AskPanel() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-transparent text-base">
 
-      <div className="flex items-center justify-between px-5 sm:px-6 py-4 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-700/80">
+      <div className="flex items-center justify-between px-5 sm:px-6 py-5 flex-shrink-0 border-b border-slate-100/80 dark:border-slate-800/80">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
-            <Sparkles size={18} className="text-rc-orange shrink-0" strokeWidth={2} />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-bud-purple dark:text-bud-teal">
+            PMO Bud AI Copilot
+          </p>
+          <h2 className="mt-1 text-xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
+            <Sparkles size={18} className="text-bud-purple dark:text-bud-teal shrink-0" strokeWidth={2} />
             Ask
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-semibold">
-            Natural language queries across the tracker
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-semibold max-w-xl">
+            Natural language queries across the tracker, tuned for partner status checks, portfolio scans, and leadership briefings.
           </p>
         </div>
         {messages.length > 0 && (
           <button
             type="button"
             onClick={() => setMessages([])}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors ring-1 ring-slate-200/80 dark:ring-slate-600"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors ring-1 ring-slate-200/80 dark:ring-slate-700"
           >
             <RotateCcw size={14} strokeWidth={2} />
             Clear
@@ -403,13 +406,16 @@ export default function AskPanel() {
 
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-8 py-10">
-            <div className="text-center max-w-md">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 ring-1 ring-slate-200/60 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <Sparkles size={22} className="text-rc-blue" strokeWidth={1.5} />
+            <div className="relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-gradient-to-br from-white via-white to-slate-100/80 px-6 py-8 text-center shadow-soft dark:border-slate-700/60 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 max-w-2xl">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-bud-teal via-bud-purple to-bud-orange" />
+              <div className="w-16 h-16 rounded-[22px] bg-bud-navy ring-1 ring-white/10 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-slate-950/20">
+                <Sparkles size={24} className="text-bud-teal" strokeWidth={1.6} />
               </div>
-              <p className="text-base font-semibold text-slate-800 tracking-tight">Ask anything about releases</p>
-              <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                Partner status, exceptions, escalations, or portfolio scans.
+              <p className="text-xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
+                Ask anything about releases
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed max-w-lg mx-auto">
+                Pull a fast answer on partner status, blockers, schedule coverage, or unmanaged Jira items without leaving the tracker.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl">
@@ -418,7 +424,7 @@ export default function AskPanel() {
                   key={i}
                   type="button"
                   onClick={() => handleSubmit(s)}
-                  className="text-left px-4 py-3 rounded-2xl bg-white/90 ring-1 ring-slate-200/70 hover:ring-sky-200 hover:bg-sky-50/40 transition-all text-xs text-slate-600 leading-snug font-medium"
+                  className="text-left px-4 py-3 rounded-2xl bg-white/90 dark:bg-slate-900/80 ring-1 ring-slate-200/70 dark:ring-slate-700 hover:ring-bud-teal/40 hover:bg-cyan-50/40 dark:hover:bg-slate-800 transition-all text-xs text-slate-600 dark:text-slate-300 leading-snug font-medium shadow-sm"
                 >
                   {s}
                 </button>
@@ -447,7 +453,7 @@ export default function AskPanel() {
 
       {/* Input bar */}
       <div className="flex-shrink-0 px-5 sm:px-6 py-4 bg-white/80 dark:bg-slate-900/85 backdrop-blur-sm border-t border-slate-100 dark:border-slate-700">
-        <div className="flex gap-2 items-end bg-slate-50/80 dark:bg-slate-800/80 rounded-2xl px-4 py-2.5 ring-1 ring-slate-200/70 dark:ring-slate-600 focus-within:ring-2 focus-within:ring-sky-200/80 dark:focus-within:ring-sky-600 focus-within:bg-white dark:focus-within:bg-slate-800 transition-all">
+        <div className="flex gap-2 items-end bg-slate-50/85 dark:bg-slate-900/80 rounded-[22px] px-4 py-2.5 ring-1 ring-slate-200/70 dark:ring-slate-700 focus-within:ring-2 focus-within:ring-bud-teal/35 focus-within:bg-white dark:focus-within:bg-slate-900 transition-all">
           <textarea
             ref={inputRef}
             rows={1}
@@ -463,7 +469,7 @@ export default function AskPanel() {
             type="button"
             onClick={() => handleSubmit()}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 hover:bg-rc-blue dark:hover:bg-rc-blue dark:hover:text-white disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5 shadow-sm"
+            className="flex-shrink-0 w-10 h-10 rounded-2xl bg-bud-navy hover:bg-bud-purple disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5 shadow-sm shadow-slate-950/20"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
           </button>

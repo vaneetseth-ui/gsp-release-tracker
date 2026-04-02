@@ -69,16 +69,19 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
 function SummaryBar({ summary }) {
   const stageOrder = ['GA', 'Beta', 'EAP', 'Dev', 'Planned', 'OnHold'];
   return (
-    <div className="flex flex-wrap gap-2 items-center px-4 sm:px-5 py-3.5">
-      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mr-1">
-        Portfolio
-      </span>
+    <div className="flex flex-wrap gap-2 items-center px-5 py-4 border-b border-slate-100/80 dark:border-slate-800/80">
+      <div className="mr-2">
+        <span className="text-[11px] font-semibold text-bud-purple dark:text-bud-teal uppercase tracking-[0.24em]">
+          Matrix Overview
+        </span>
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-1">Partner x product portfolio coverage</p>
+      </div>
       {stageOrder.map(
         (stage) =>
           (summary.byStage[stage] || 0) > 0 && (
             <span
               key={stage}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${STAGES[stage].badge}`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm ${STAGES[stage].badge}`}
             >
               {STAGES[stage].label}
               <span className="tabular-nums font-bold opacity-95">{summary.byStage[stage]}</span>
@@ -87,7 +90,7 @@ function SummaryBar({ summary }) {
       )}
       <div className="flex flex-wrap gap-3 ml-auto text-sm text-slate-600 dark:text-slate-300">
         {(summary.withSchedule || 0) > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold ring-1 ring-emerald-200/80">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold ring-1 ring-emerald-200/80">
             <Calendar size={14} strokeWidth={2.5} />
             {summary.withSchedule} with schedule
           </span>
@@ -117,14 +120,14 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
     <div className="flex flex-col h-full min-h-0">
       <SummaryBar summary={summary} />
 
-      <div className="flex flex-wrap items-center gap-2 px-4 sm:px-5 pb-2 text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm text-slate-500 dark:text-slate-400">
         <span className="font-bold text-slate-500 dark:text-slate-400">Legend</span>
         {Object.entries(STAGES).map(
           ([key, s]) =>
             key !== 'N/A' && (
               <span
                 key={key}
-                className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${s.badge} text-xs`}
+                className={`inline-flex items-center px-2 py-1 rounded-md font-semibold shadow-sm ${s.badge} text-xs`}
               >
                 {s.label}
               </span>
@@ -136,7 +139,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
         {loading && <span className="text-slate-400 dark:text-slate-500 ml-auto font-medium">Loading…</span>}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-4 sm:px-5 pb-4">
+      <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-5 pb-5">
         {!loading && matrixReleases.length === 0 && (
           <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 ring-1 ring-slate-200/60 dark:ring-slate-700 shadow-soft px-6 py-14 text-center">
             <p className="text-base font-semibold text-slate-700 dark:text-slate-200">No release data to show</p>
@@ -153,7 +156,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
           </div>
         )}
         {matrixReleases.length > 0 && (
-          <div className="rounded-2xl bg-white/90 dark:bg-slate-900/85 ring-1 ring-slate-200/60 dark:ring-slate-700/80 shadow-soft overflow-hidden">
+          <div className="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white/85 shadow-soft ring-1 ring-white/60 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/55 dark:ring-slate-700/40">
             <table className="w-full text-[0.95rem] sm:text-base border-collapse">
               <thead>
                 <tr>
