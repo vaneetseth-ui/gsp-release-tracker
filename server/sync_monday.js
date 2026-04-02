@@ -39,8 +39,8 @@ const MONDAY_ITEM_FIELDS = `
   url
   column_values {
     id
-    title
     text
+    type
     value
     ... on BoardRelationValue {
       linked_item_ids
