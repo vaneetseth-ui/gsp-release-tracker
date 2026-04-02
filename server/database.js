@@ -29,6 +29,8 @@ const ADD_COLUMNS_SQL = [
   'ALTER TABLE releases ADD COLUMN IF NOT EXISTS product_area TEXT',
   'ALTER TABLE releases ADD COLUMN IF NOT EXISTS source TEXT',
   'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_url TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_board_id TEXT',
+  'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_board_name TEXT',
   'ALTER TABLE releases ADD COLUMN IF NOT EXISTS monday_item_id TEXT',
   'ALTER TABLE releases ADD COLUMN IF NOT EXISTS release_key TEXT',
   'ALTER TABLE releases ADD COLUMN IF NOT EXISTS pmo_status TEXT',
@@ -189,6 +191,8 @@ const SELECT_RELEASES_COLS = [
   'arr_at_risk',
   'source',
   'monday_url',
+  'monday_board_id',
+  'monday_board_name',
   'monday_item_id',
   'data_provenance',
   'is_unmanaged_jira',
@@ -233,6 +237,8 @@ function rowToRelease(row) {
     arr_at_risk: row.arr_at_risk != null ? Number(row.arr_at_risk) : null,
     source: row.source ?? null,
     monday_url: row.monday_url ?? null,
+    monday_board_id: row.monday_board_id ?? null,
+    monday_board_name: row.monday_board_name ?? null,
     monday_item_id: row.monday_item_id ?? null,
     data_provenance: row.data_provenance ?? null,
     is_unmanaged_jira: row.is_unmanaged_jira ?? 0,
@@ -319,6 +325,8 @@ function releaseToInsertRow(r) {
     r.arr_at_risk ?? null,
     r.source ?? null,
     r.monday_url ?? null,
+    r.monday_board_id ?? null,
+    r.monday_board_name ?? null,
     r.monday_item_id ?? null,
     r.data_provenance != null ? String(r.data_provenance) : null,
     r.is_unmanaged_jira ? 1 : 0,
@@ -346,12 +354,12 @@ export async function replaceAllData({ releases, changelog, lastSync, ingestMeta
         product_readiness_date, gsp_launch_date, schedule_url, tracker_group,
         monday_comment, comment_updated_at, target_date, actual_date, jira_number,
         pm, se_lead, csm, notes,
-        arr_at_risk, source, monday_url, monday_item_id, data_provenance,
+        arr_at_risk, source, monday_url, monday_board_id, monday_board_name, monday_item_id, data_provenance,
         is_unmanaged_jira, include_in_matrix, legacy_planning_date, legacy_golive_date,
         legacy_sourced, salesforce_account_id, bug_report_count, bug_reports_url
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
-        $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39
+        $27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41
       )
     `;
     for (const r of releases) {

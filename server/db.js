@@ -132,6 +132,14 @@ function normalizeRelease(r) {
       r.monday_url != null && String(r.monday_url).trim() !== ''
         ? String(r.monday_url).trim()
         : null,
+    monday_board_id:
+      r.monday_board_id != null && String(r.monday_board_id).trim() !== ''
+        ? String(r.monday_board_id).trim()
+        : null,
+    monday_board_name:
+      r.monday_board_name != null && String(r.monday_board_name).trim() !== ''
+        ? String(r.monday_board_name).trim()
+        : null,
     monday_item_id:
       r.monday_item_id != null && String(r.monday_item_id).trim() !== ''
         ? String(r.monday_item_id).trim()
@@ -378,6 +386,8 @@ export function getSummary() {
           fetchedAt: meta.fetchedAt ?? null,
           mondayGspPriorityItems: meta.mondayPriorities ?? null,
           mondayTrackerRowsIndexed: meta.trackerRows ?? null,
+          mondayApiVersion: meta.mondayApiVersion ?? null,
+          mondayBoardStats: Array.isArray(meta.boardStats) ? meta.boardStats : null,
           jiraGspIssuesPulled: meta.jiraGsp ?? null,
           /** GSP Jira issues that matched a Monday row (same ingest); requires current row counts. */
           jiraIssuesLinkedToMondayEstimate:
@@ -395,7 +405,7 @@ export function getSummary() {
     /** Rows from GSP Jira with no Monday priority link (Monday-first pipeline only). */
     unmanagedJiraRows: unmanagedJira,
     /** Monday-derived rows that list a Jira key (enriched in Step 5 when issue exists). */
-    mondayRowsWithJiraKey,
+    mondayRowsWithJiraKey: mondayWithJiraKey,
     /**
      * From last `POST /api/ingest` meta (set by `scripts/sync-local.js`).
      * Raw API pull sizes before merge into release rows.

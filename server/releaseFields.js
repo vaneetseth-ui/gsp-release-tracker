@@ -33,6 +33,8 @@
  * @property {number|null} arr_at_risk
  * @property {string|null} source monday | jira | confluence | blended
  * @property {string|null} monday_url
+ * @property {string|null} monday_board_id
+ * @property {string|null} monday_board_name
  * @property {string|null} monday_item_id
  * @property {string|null} data_provenance JSON array of step tags
  * @property {number} is_unmanaged_jira Jira GSP with no Monday item
@@ -62,6 +64,8 @@ export const RELEASE_EXTRA_COLUMNS = [
   'monday_comment',
   'comment_updated_at',
   'data_provenance',
+  'monday_board_id',
+  'monday_board_name',
   'is_unmanaged_jira',
   'include_in_matrix',
   'legacy_planning_date',
@@ -86,6 +90,8 @@ export const MONDAY_CANONICAL_FIELDS = new Set([
   'monday_comment',
   'comment_updated_at',
   'monday_url',
+  'monday_board_id',
+  'monday_board_name',
   'monday_item_id',
   'se_lead',
   'pm',

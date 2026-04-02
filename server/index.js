@@ -9,12 +9,13 @@ import 'dotenv/config';
  *   GET  /api/summary           — portfolio stats
  *   GET  /api/releases          — all releases (?partner=X &product=Y &stage=Z)
  *   GET  /api/exceptions        — unmanaged Jira rows (?type=unmanaged optional)
- *   POST /api/sync/trigger      — optional background Monday sync (SYNC_LOCAL_SCRIPT_PATH + auth)
+ *   POST /api/sync/trigger      — background Monday sync on the server when MONDAY_API_KEY exists
  *   GET  /api/changelog         — recent changes (?limit=N &partner=X)
  *   POST /api/query             — natural language query → tier-routed result
- *   POST /api/ingest            — push releases from local Jira sync (optional Bearer INGEST_TOKEN)
+ *   POST /api/ingest            — push releases from a trusted client (optional Bearer INGEST_TOKEN)
+ *   POST /api/sync/monday       — Monday-first sync directly from server env (optional Jira supplement)
  *   POST /api/sync/confluence   — fetch configured wiki pages, parse tables, merge (Bearer INGEST_TOKEN if set)
- *   POST /api/sync/all          — Jira full ingest (if JIRA_PAT) then Confluence merge (if base URL set); optional Bearer INGEST_TOKEN
+ *   POST /api/sync/all          — Monday-first ingest then Confluence merge (if configured); optional Bearer INGEST_TOKEN
  */
 import express   from 'express';
 import cors      from 'cors';
@@ -23,7 +24,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as db from './db.js';
 import { runConfluenceIngestBuild, CONFLUENCE_PAGES } from './confluence/ingest.js';
-import { syncFromJira } from './sync_jira.js';
+import { runMondayFirstSync } from './sync_monday.js';
 import { postGlipMessage, formatNotifyCardPayload } from './glip.js';
 import { runAskQuery } from './askEngine.js';
 
@@ -96,30 +97,50 @@ app.post('/api/sync/confluence', async (req, res) => {
   }
 });
 
-/** Jira replace-all ingest + Confluence merge. Monday.com has no API ingest here; use JIRA_FIELD_MONDAY_* for links. */
+app.post('/api/sync/monday', async (req, res) => {
+  if (!requireIngestAuth(req, res)) return;
+  try {
+    const bundle = await runMondayFirstSync({ env: process.env, logger: console });
+    const result = await db.applyIngest({
+      releases: bundle.releases,
+      changelog: undefined,
+      meta: bundle.meta,
+    });
+    res.json({
+      ok: true,
+      stats: bundle.stats,
+      lastSync: result.lastSync,
+      releases: result.releases,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** Monday-first ingest + optional Confluence merge. */
 app.post('/api/sync/all', async (req, res) => {
   if (!requireIngestAuth(req, res)) return;
 
   /** @type {object[]} */
   const steps = [];
 
-  if (process.env.JIRA_PAT?.trim()) {
+  if (process.env.MONDAY_API_KEY?.trim()) {
     try {
-      const bundle = await syncFromJira();
+      const bundle = await runMondayFirstSync({ env: process.env, logger: console });
       await db.applyIngest({
         releases: bundle.releases,
         changelog: undefined,
-        meta: { fetchedAt: bundle.fetchedAt },
+        meta: bundle.meta,
       });
       steps.push({
-        jira: { ok: true, count: bundle.releases.length, fetchedAt: bundle.fetchedAt },
+        monday: { ok: true, ...bundle.stats, fetchedAt: bundle.meta.fetchedAt },
       });
     } catch (e) {
-      steps.push({ jira: { ok: false, error: e?.message || String(e) } });
+      steps.push({ monday: { ok: false, error: e?.message || String(e) } });
     }
   } else {
     steps.push({
-      jira: { skipped: true, reason: 'JIRA_PAT not set' },
+      monday: { skipped: true, reason: 'MONDAY_API_KEY not set' },
     });
   }
 
@@ -153,12 +174,6 @@ app.post('/api/sync/all', async (req, res) => {
       },
     });
   }
-
-  steps.push({
-    monday: {
-      note: 'Use local `node scripts/sync-local.js` (Monday-first v1.2) from a trusted network; POST /api/ingest. Optional JIRA_FIELD_MONDAY_* still supported.',
-    },
-  });
 
   const anyFailed = steps.some((s) => {
     const v = Object.values(s)[0];
@@ -214,15 +229,30 @@ app.get('/api/exceptions', (req, res) => {
   }
 });
 
-/** v1.3 Ch.23 — on-demand sync when host can run Monday-first script (e.g. Mac mini); Heroku usually omits SYNC_LOCAL_SCRIPT_PATH. */
+/** On-demand sync. Prefer server-side Monday sync when configured; fall back to an external script path if explicitly provided. */
 app.post('/api/sync/trigger', (req, res) => {
   if (!requireIngestAuth(req, res)) return;
+  if (process.env.MONDAY_API_KEY?.trim()) {
+    void (async () => {
+      try {
+        const bundle = await runMondayFirstSync({ env: process.env, logger: console });
+        await db.applyIngest({
+          releases: bundle.releases,
+          changelog: undefined,
+          meta: bundle.meta,
+        });
+      } catch (e) {
+        console.error('sync/trigger failed:', e?.message || String(e));
+      }
+    })();
+    return res.status(202).json({ ok: true, message: 'Server-side Monday sync started' });
+  }
   const scriptPath = (process.env.SYNC_LOCAL_SCRIPT_PATH || '').trim();
   if (!scriptPath) {
     return res.status(501).json({
       ok: false,
       error:
-        'SYNC_LOCAL_SCRIPT_PATH is not set. Run sync from your machine: node scripts/sync-local.js (see scripts/setup-mac-cron.sh).',
+        'MONDAY_API_KEY is not set on the server, and SYNC_LOCAL_SCRIPT_PATH is not configured. Add MONDAY_API_KEY to run sync in Heroku or run node scripts/sync-local.js from your machine.',
     });
   }
   const child = spawn(process.execPath, [scriptPath], {
