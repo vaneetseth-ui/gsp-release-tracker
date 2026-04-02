@@ -573,10 +573,17 @@ export async function runMondayFirstSync({ env = process.env, logger = console }
   const trackerById = buildTrackerIndex([trackerBoard1, trackerBoard2]);
 
   let jiraIssues = [];
+  let jiraError = null;
   if (config.jiraPat) {
-    logger.log('▶ Jira GSP (supplement + unmanaged detection)');
-    jiraIssues = await fetchAllJira(config);
-    logger.log(`  ✓ ${jiraIssues.length} GSP issues`);
+    try {
+      logger.log('▶ Jira GSP (supplement + unmanaged detection)');
+      jiraIssues = await fetchAllJira(config);
+      logger.log(`  ✓ ${jiraIssues.length} GSP issues`);
+    } catch (e) {
+      jiraError = e?.message || String(e);
+      jiraIssues = [];
+      logger.warn(`⚠ Jira supplement skipped: ${jiraError}`);
+    }
   } else {
     logger.warn('⚠ JIRA_PAT not set — sync will use Monday only, without Jira enrichment or unmanaged detection.');
   }
@@ -630,6 +637,7 @@ export async function runMondayFirstSync({ env = process.env, logger = console }
       mondayPriorities: priorityItems.length,
       trackerRows: trackerById.size,
       jiraGsp: jiraIssues.length,
+      jiraError,
       jiraLinkedToMonday,
       unmanagedJiraRows: Math.max(0, unmanagedRowCount),
       mondayApiVersion: config.mondayApiVersion,
@@ -643,6 +651,7 @@ export async function runMondayFirstSync({ env = process.env, logger = console }
       mondayPriorities: priorityItems.length,
       trackerRowsIndexed: trackerById.size,
       jiraIssuesPulled: jiraIssues.length,
+      jiraError,
       jiraLinkedToMonday,
       unmanagedJiraRows: Math.max(0, unmanagedRowCount),
       totalReleases: releases.length,
