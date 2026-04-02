@@ -13,7 +13,7 @@ import GlipNotifyButton from './GlipNotifyButton.jsx';
 const SUGGESTIONS = [
   "What is MCM's Nova IVA status?",
   'Which GSP Jira projects are not in Monday?',
-  'How many RCS projects does PMO manage with a schedule?',
+  'How many RCX projects does PMO manage with a schedule?',
   'Top 5 AT&T projects',
   'Show launch dates for all projects by row',
   'Is Telus live on RCX?',
