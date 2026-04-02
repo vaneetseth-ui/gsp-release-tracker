@@ -82,128 +82,130 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
 
   return (
     <header className="flex-shrink-0 px-3 pt-3 sm:px-4 sm:pt-4">
-      <div className="hero-sheen relative overflow-hidden rounded-[30px] border border-slate-800/60 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]">
-        <div className="relative grid gap-4 px-5 py-5 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="mb-3 flex items-center gap-3">
-                  <BuddAiMark compact />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Powered By</p>
-                    <p className="font-display text-lg font-bold text-white">PMO <span className="text-bud-teal">BuddAI</span></p>
+      <div className="mx-auto max-w-[1180px]">
+        <div className="hero-sheen relative overflow-hidden rounded-[30px] border border-slate-800/60 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]">
+          <div className="relative grid gap-4 px-5 py-5 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="mb-3 flex items-center gap-3">
+                    <BuddAiMark compact />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Powered By</p>
+                      <p className="font-display text-lg font-bold text-white">PMO <span className="text-bud-teal">BuddAI</span></p>
+                    </div>
                   </div>
+                  <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-[2rem]">
+                    GSP Release Tracker
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-300 sm:text-base">
+                    Clear release visibility for strategic partners, with Monday as the operational source of truth.
+                  </p>
                 </div>
-                <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-[2rem]">
-                  GSP Release Tracker
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-300 sm:text-base">
-                  Clear release visibility for strategic partners, with Monday as the operational source of truth.
-                </p>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 p-3 text-white transition-colors hover:bg-white/12"
+                  aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                >
+                  {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 p-3 text-white transition-colors hover:bg-white/12"
-                aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              >
-                {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
-              </button>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatCard icon={Activity} label="Active Releases" value={summary.total || 0} tone="primary" />
-              <StatCard icon={CalendarRange} label="Schedules Linked" value={summary.withSchedule || 0} tone="success" />
-              <StatCard icon={CheckCircle} label="GA Live" value={summary.byStage.GA || 0} tone="accent" />
-              <StatCard icon={AlertCircle} label="Data Gaps" value={gapCount} tone={gapCount > 0 ? 'warning' : 'default'} />
-            </div>
-          </div>
-
-          <div className="rounded-[26px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-lg shadow-slate-950/10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bud-teal">
-              Runtime Control
-            </p>
-            <p className="mt-2 text-lg font-display font-bold text-slate-950">Portfolio sync</p>
-
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source of truth</p>
-                <p className="mt-1 text-base font-semibold text-slate-950">Monday production sync</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
-                <p className="mt-1 text-base font-semibold text-slate-950">
-                  {syncStatus.lastSync || 'Waiting for health check'}
-                </p>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <StatCard icon={Activity} label="Active Releases" value={summary.total || 0} tone="primary" />
+                <StatCard icon={CalendarRange} label="Schedules Linked" value={summary.withSchedule || 0} tone="success" />
+                <StatCard icon={CheckCircle} label="GA Live" value={summary.byStage.GA || 0} tone="accent" />
+                <StatCard icon={AlertCircle} label="Data Gaps" value={gapCount} tone={gapCount > 0 ? 'warning' : 'default'} />
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <ActionButton
-                primary
-                icon={Sparkles}
-                onClick={onSyncNow}
-                disabled={syncStatus.checking}
-                title="Start Monday-first sync on the server"
-              >
-                {syncStatus.checking ? 'Syncing…' : 'Sync Monday'}
-              </ActionButton>
-              <ActionButton
-                icon={RefreshCw}
-                onClick={onRefresh}
-                disabled={syncStatus.checking}
-                title="Reload cached releases from the API"
-              >
-                Refresh cache
-              </ActionButton>
-            </div>
+            <div className="rounded-[26px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-lg shadow-slate-950/10">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bud-teal">
+                Runtime Control
+              </p>
+              <p className="mt-2 text-lg font-display font-bold text-slate-950">Portfolio sync</p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">GA {summary.byStage.GA || 0}</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Beta {summary.byStage.Beta || 0}</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">EAP {summary.byStage.EAP || 0}</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Dev {summary.byStage.Dev || 0}</span>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source of truth</p>
+                  <p className="mt-1 text-base font-semibold text-slate-950">Monday production sync</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
+                  <p className="mt-1 text-base font-semibold text-slate-950">
+                    {syncStatus.lastSync || 'Waiting for health check'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <ActionButton
+                  primary
+                  icon={Sparkles}
+                  onClick={onSyncNow}
+                  disabled={syncStatus.checking}
+                  title="Start Monday-first sync on the server"
+                >
+                  {syncStatus.checking ? 'Syncing…' : 'Sync Monday'}
+                </ActionButton>
+                <ActionButton
+                  icon={RefreshCw}
+                  onClick={onRefresh}
+                  disabled={syncStatus.checking}
+                  title="Reload cached releases from the API"
+                >
+                  Refresh cache
+                </ActionButton>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">GA {summary.byStage.GA || 0}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Beta {summary.byStage.Beta || 0}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">EAP {summary.byStage.EAP || 0}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Dev {summary.byStage.Dev || 0}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <nav className="mt-3 flex gap-2 overflow-x-auto rounded-[24px] border border-slate-200 bg-white p-2 shadow-soft">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onTabChange(tab.id)}
-              className={`group flex min-w-[180px] flex-1 items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-all ${
-                isActive
-                  ? 'bg-bud-navy text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
-                <Icon size={18} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
-              </span>
-              <span className="min-w-0">
-                <span className="flex items-center gap-2 text-sm font-bold">
-                  {tab.label}
-                  {tab.id === 'exceptions' && gapCount > 0 && (
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900'}`}>
-                      {gapCount}
-                    </span>
-                  )}
+        <nav className="mt-3 flex gap-2 overflow-x-auto rounded-[24px] border border-slate-200 bg-white p-2 shadow-soft">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                className={`group flex min-w-[180px] flex-1 items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-all ${
+                  isActive
+                    ? 'bg-bud-navy text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
+                  <Icon size={18} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
                 </span>
-                <span className={`mt-0.5 block text-xs ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
-                  {tab.desc}
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-sm font-bold">
+                    {tab.label}
+                    {tab.id === 'exceptions' && gapCount > 0 && (
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900'}`}>
+                        {gapCount}
+                      </span>
+                    )}
+                  </span>
+                  <span className={`mt-0.5 block text-xs ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
+                    {tab.desc}
+                  </span>
                 </span>
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
     </header>
   );
 }
