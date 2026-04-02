@@ -5,16 +5,18 @@
  */
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Grid3X3,
   AlertCircle,
+  BriefcaseBusiness,
   Clock,
+  Grid3X3,
+  LayoutDashboard,
   MessageSquare,
   RefreshCw,
   CheckCircle,
   Sun,
   Moon,
   Activity,
-  CalendarRange,
+  CalendarDays,
   Sparkles,
 } from 'lucide-react';
 import MatrixView      from './components/MatrixView.jsx';
@@ -23,34 +25,38 @@ import ExceptionPanel  from './components/ExceptionPanel.jsx';
 import ChangelogFeed   from './components/ChangelogFeed.jsx';
 import AskPanel        from './components/AskPanel.jsx';
 import TimelineFilter  from './components/TimelineFilter.jsx';
+import OverviewDashboard from './components/OverviewDashboard.jsx';
+import PortfolioView from './components/PortfolioView.jsx';
 import BuddAiMark from './components/BuddAiMark.jsx';
 import { useData } from './context/DataContext.jsx';
 import { useTheme } from './context/ThemeContext.jsx';
 
 const TABS = [
-  { id: 'ask',        label: 'Ask',             icon: MessageSquare, desc: 'Natural language on cached data' },
-  { id: 'matrix',     label: 'Release Matrix', icon: Grid3X3,       desc: 'Partners × products by bucket' },
-  { id: 'exceptions', label: 'Exceptions',      icon: AlertCircle,   desc: 'Data-quality gaps' },
-  { id: 'changelog',  label: 'Changelog',       icon: Clock,         desc: 'Recent status changes' },
+  { id: 'overview',   label: 'Overview',   icon: LayoutDashboard },
+  { id: 'portfolio',  label: 'Portfolio',  icon: BriefcaseBusiness },
+  { id: 'matrix',     label: 'Matrix',     icon: Grid3X3 },
+  { id: 'exceptions', label: 'Exceptions', icon: AlertCircle },
+  { id: 'ask',        label: 'Ask',        icon: MessageSquare },
+  { id: 'changelog',  label: 'Changes',    icon: Clock },
 ];
 
-function StatCard({ icon: Icon, label, value, tone = 'default' }) {
+function StatPill({ icon: Icon, label, value, tone = 'default' }) {
   const toneClass =
     {
-      primary: 'border-cyan-200 bg-cyan-50',
-      accent: 'border-violet-200 bg-violet-50',
-      success: 'border-emerald-200 bg-emerald-50',
-      warning: 'border-orange-200 bg-orange-50',
-      default: 'border-slate-200 bg-white',
-    }[tone] || 'border-slate-200 bg-white';
+      primary: 'border-cyan-200/60 bg-cyan-50/90',
+      accent: 'border-violet-200/60 bg-violet-50/90',
+      success: 'border-emerald-200/60 bg-emerald-50/90',
+      warning: 'border-orange-200/60 bg-orange-50/90',
+      default: 'border-slate-200/80 bg-white/95',
+    }[tone] || 'border-slate-200/80 bg-white/95';
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 shadow-sm ${toneClass}`}>
+    <div className={`rounded-2xl border px-3 py-3 shadow-sm ${toneClass}`}>
       <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
         <Icon size={14} strokeWidth={2} className="text-bud-teal" />
         {label}
       </div>
-      <div className="mt-2 text-2xl font-display font-bold tracking-tight text-slate-950">{value}</div>
+      <div className="mt-2 text-xl font-display font-bold tracking-tight text-slate-950">{value}</div>
     </div>
   );
 }
@@ -84,7 +90,7 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
     <header className="flex-shrink-0 px-3 pt-3 sm:px-4 sm:pt-4">
       <div className="mx-auto max-w-[1180px]">
         <div className="hero-sheen relative overflow-hidden rounded-[30px] border border-slate-800/60 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]">
-          <div className="relative grid gap-4 px-5 py-5 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="relative grid gap-4 px-5 py-5 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -98,8 +104,8 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
                   <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-[2rem]">
                     GSP Release Tracker
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-300 sm:text-base">
-                    Clear release visibility for strategic partners, with Monday as the operational source of truth.
+                  <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-300">
+                    Monday-first release intelligence for PMO leadership, partner planning, and operational triage.
                   </p>
                 </div>
                 <button
@@ -114,30 +120,31 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
               </div>
 
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <StatCard icon={Activity} label="Active Releases" value={summary.total || 0} tone="primary" />
-                <StatCard icon={CalendarRange} label="Schedules Linked" value={summary.withSchedule || 0} tone="success" />
-                <StatCard icon={CheckCircle} label="GA Live" value={summary.byStage.GA || 0} tone="accent" />
-                <StatCard icon={AlertCircle} label="Data Gaps" value={gapCount} tone={gapCount > 0 ? 'warning' : 'default'} />
+                <StatPill icon={Activity} label="Active" value={summary.total || 0} tone="primary" />
+                <StatPill icon={CalendarDays} label="Scheduled" value={summary.withSchedule || 0} tone="success" />
+                <StatPill icon={CheckCircle} label="GA" value={summary.byStage.GA || 0} tone="accent" />
+                <StatPill icon={AlertCircle} label="Gaps" value={gapCount} tone={gapCount > 0 ? 'warning' : 'default'} />
               </div>
             </div>
 
             <div className="rounded-[26px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-lg shadow-slate-950/10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bud-teal">
-                Runtime Control
-              </p>
-              <p className="mt-2 text-lg font-display font-bold text-slate-950">Portfolio sync</p>
-
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source of truth</p>
-                  <p className="mt-1 text-base font-semibold text-slate-950">Monday production sync</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
-                  <p className="mt-1 text-base font-semibold text-slate-950">
-                    {syncStatus.lastSync || 'Waiting for health check'}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-bud-teal">
+                    Runtime Control
                   </p>
+                  <p className="mt-2 text-lg font-display font-bold text-slate-950">Portfolio sync</p>
                 </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  Monday authority
+                </span>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
+                <p className="mt-1 text-base font-semibold text-slate-950">
+                  {syncStatus.lastSync || 'Waiting for health check'}
+                </p>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -170,7 +177,7 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
           </div>
         </div>
 
-        <nav className="mt-3 flex gap-2 overflow-x-auto rounded-[24px] border border-slate-200 bg-white p-2 shadow-soft">
+        <nav className="mt-3 flex flex-wrap gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-soft">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -179,27 +186,22 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
                 key={tab.id}
                 type="button"
                 onClick={() => onTabChange(tab.id)}
-                className={`group flex min-w-[180px] flex-1 items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-all ${
+                className={`group flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-center text-sm font-semibold transition-all sm:flex-none ${
                   isActive
                     ? 'bg-bud-navy text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
+                <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
                   <Icon size={18} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
                 </span>
-                <span className="min-w-0">
-                  <span className="flex items-center gap-2 text-sm font-bold">
-                    {tab.label}
-                    {tab.id === 'exceptions' && gapCount > 0 && (
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900'}`}>
-                        {gapCount}
-                      </span>
-                    )}
-                  </span>
-                  <span className={`mt-0.5 block text-xs ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
-                    {tab.desc}
-                  </span>
+                <span className="flex items-center gap-2">
+                  <span>{tab.label}</span>
+                  {tab.id === 'exceptions' && gapCount > 0 && (
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900'}`}>
+                      {gapCount}
+                    </span>
+                  )}
                 </span>
               </button>
             );
@@ -227,7 +229,7 @@ function formatSyncTime(isoString) {
 
 export default function App() {
   const { refresh: refreshReleases, dataStatus, loadError, loading: releasesLoading } = useData();
-  const [activeTab, setActiveTab] = useState('ask');
+  const [activeTab, setActiveTab] = useState('overview');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
 
@@ -322,10 +324,21 @@ export default function App() {
           syncStatus={syncStatus}
         />
 
-        <TimelineFilter />
+        {!['ask', 'changelog'].includes(activeTab) && <TimelineFilter />}
 
         <div className="flex flex-1 gap-3 overflow-hidden px-3 pb-3 sm:px-4 sm:pb-4">
           <main className="glass-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.3)]">
+            {activeTab === 'overview' && (
+              <OverviewDashboard
+                onSelectPartner={handleSelectPartner}
+                onNavigate={setActiveTab}
+              />
+            )}
+            {activeTab === 'portfolio' && (
+              <PortfolioView
+                onSelectPartner={handleSelectPartner}
+              />
+            )}
             {activeTab === 'ask' && <AskPanel />}
             {activeTab === 'matrix' && (
               <MatrixView
