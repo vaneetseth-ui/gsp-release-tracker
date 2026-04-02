@@ -67,8 +67,8 @@ const PRIORITIES_FIELD_SPECS = {
 
 const TRACKER_FIELD_SPECS = {
   groupName: { aliases: ['Group Name', 'Group', 'Name'], required: true },
-  productReadinessDate: { aliases: ['Product Readiness Date', 'Product Readiness'], required: true },
-  gspLaunchDate: { aliases: ['GSP / Partner Launch Date', 'GSP Launch Date', 'Partner Launch Date'], required: true },
+  productReadinessDate: { aliases: ['Product Readiness Date', 'Product Readiness'], required: false },
+  gspLaunchDate: { aliases: ['GSP / Partner Launch Date', 'GSP Launch Date', 'Partner Launch Date'], required: false },
 };
 
 function normalizeTitle(text) {
@@ -276,7 +276,9 @@ async function fetchBoardBundle(boardId, label, fieldSpecs, config) {
     throw new Error(`Monday board ${boardId} (${label}) not found or inaccessible`);
   }
 
-  const fieldRefs = resolveBoardFieldRefs(board.columns || [], fieldSpecs, board.name || label);
+  const fieldRefs = resolveBoardFieldRefs(board.columns || [], fieldSpecs, board.name || label, {
+    strict: Object.values(fieldSpecs).some((spec) => spec.required),
+  });
   let items = [...(board.items_page?.items || [])];
   let cursor = board.items_page?.cursor || null;
   while (cursor) {
