@@ -2,7 +2,7 @@
  * ChangelogFeed — Recent status changes from /api/changelog
  */
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, ArrowRight, Search, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
+import { Clock, Search, TrendingUp, TrendingDown, Minus, Loader2, CheckCircle2 } from 'lucide-react';
 import StatusBadge from './StatusBadge.jsx';
 
 const STAGE_ORDER = {
@@ -198,13 +198,44 @@ export default function ChangelogFeed({ onSelectPartner }) {
           </div>
         )}
         {!loading && !error && filtered.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
-            <Search size={32} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm max-w-sm mx-auto leading-relaxed">
-              {items.length === 0
-                ? 'No status-change history is available yet. This feed should stay hidden or show an onboarding state until changelog tracking is enabled.'
-                : `No changes match "${search}"`}
-            </p>
+          <div className="py-12 text-center text-slate-400">
+            {items.length === 0 ? (
+              <div className="mx-auto max-w-xl rounded-[28px] border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-6 py-8 text-left shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
+                    <CheckCircle2 size={20} strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Getting Started</p>
+                    <h3 className="mt-1 text-lg font-display font-bold tracking-tight text-slate-900">
+                      Changelog not yet active
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                      Once changelog tracking is enabled, this feed will show promotions, regressions, and owner changes across the GSP portfolio.
+                    </p>
+                    <ul className="mt-4 space-y-1 text-sm text-slate-600">
+                      <li>Promotions to GA, Beta, and EAP</li>
+                      <li>Blocks, regressions, and on-hold movements</li>
+                      <li>Owner and narrative updates by partner or product</li>
+                    </ul>
+                    <button
+                      type="button"
+                      className="mt-5 inline-flex items-center rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                    >
+                      Enable changelog tracking →
+                    </button>
+                    <p className="mt-2 text-xs text-slate-500">Backend tracking must be configured before entries can appear here.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Search size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm max-w-sm mx-auto leading-relaxed">
+                  {`No changes match "${search}"`}
+                </p>
+              </>
+            )}
           </div>
         )}
         {!loading &&

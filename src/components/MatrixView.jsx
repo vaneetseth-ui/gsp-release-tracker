@@ -22,11 +22,21 @@ const AREA_HEADER_TINT = [
   'bg-teal-50/90 text-teal-900',
 ];
 
+function stageDotStyle(stage) {
+  if (stage === 'GA') return 'bg-emerald-500 shadow-emerald-200';
+  if (stage === 'Beta') return 'bg-sky-500 shadow-sky-200';
+  if (stage === 'EAP') return 'bg-amber-500 shadow-amber-200';
+  if (stage === 'Dev') return 'bg-orange-500 shadow-orange-200';
+  if (stage === 'Planned') return 'border border-slate-400 bg-white';
+  if (stage === 'OnHold' || stage === 'Blocked') return 'bg-rose-500 shadow-rose-200';
+  return 'bg-slate-200';
+}
+
 function Cell({ release, onClick, tdClass = '', title: titleProp }) {
   if (!release) {
     return (
       <td className={`px-1 py-2.5 text-center align-middle ${tdClass}`}>
-        <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>
+        <span className="text-slate-300 dark:text-slate-600 text-sm">·</span>
       </td>
     );
   }
@@ -34,7 +44,6 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
   const stage = release.stage || 'N/A';
   const s = STAGES[stage] || STAGES['N/A'];
   const isNA = stage === 'N/A';
-  const label = release.pmo_status || s.label;
 
   return (
     <td
@@ -44,11 +53,11 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
       onClick={() => !isNA && onClick(release)}
       title={titleProp ?? matrixCellTooltip(release)}
     >
-      <div className="inline-flex flex-col items-center gap-0.5">
-        <StatusBadge
-          status={label.length > 18 ? `${label.slice(0, 16)}…` : label}
-          className={cn('leading-tight', isNA && 'opacity-45')}
-        />
+      <div className="inline-flex flex-col items-center gap-1">
+        <span className={cn('h-3.5 w-3.5 rounded-full shadow-sm', stageDotStyle(stage), isNA && 'opacity-40')} />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          {stage === 'N/A' ? '—' : s.label}
+        </span>
         {release.legacy_sourced ? (
           <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300">Legacy</span>
         ) : null}
@@ -75,7 +84,7 @@ function SummaryBar({ summary }) {
         <span className="text-[11px] font-semibold text-bud-purple dark:text-bud-teal uppercase tracking-[0.24em]">
           Matrix Overview
         </span>
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-1">Partner x product portfolio coverage</p>
+        <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">Partner x product portfolio coverage</p>
       </div>
       {stageOrder.map(
         (stage) =>
@@ -117,16 +126,13 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
     <div className="flex flex-col h-full min-h-0">
       <SummaryBar summary={summary} />
 
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm text-slate-500 dark:text-slate-400 border-b border-slate-100">
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-3 text-sm text-slate-500 dark:text-slate-400">
         <span className="font-bold text-slate-500 dark:text-slate-400">Legend</span>
-        {Object.entries(STAGES).map(
-          ([key, s]) =>
-            key !== 'N/A' && (
-              <StatusBadge key={key} status={s.label} className="text-xs" />
-            )
-        )}
-        <span className="text-slate-400 dark:text-slate-500 ml-2 text-xs">
-          Cell shows PMO status (truncated) · see card for full text
+        <span className="inline-flex items-center gap-2 text-xs font-semibold"><span className="h-3 w-3 rounded-full bg-emerald-500" /> Active / live</span>
+        <span className="inline-flex items-center gap-2 text-xs font-semibold"><span className="h-3 w-3 rounded-full border border-slate-400 bg-white" /> Planned</span>
+        <span className="inline-flex items-center gap-2 text-xs font-semibold"><span className="text-base leading-none text-slate-300">·</span> No row</span>
+        <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
+          Product families are grouped above the grid. Hover or open detail for exact PMO status.
         </span>
         {loading && <span className="text-slate-400 dark:text-slate-500 ml-auto font-medium">Loading…</span>}
       </div>
@@ -164,9 +170,9 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     <th
                       key={g.area || g.bucket}
                       colSpan={g.products.length}
-                      className={`px-2 py-2 text-center align-middle border-b border-slate-200 ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]}`}
+                      className={`px-2 py-2 text-center align-middle border-b border-slate-200 ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} ${gi > 0 ? 'border-l-[2px] border-l-white/80' : ''}`}
                     >
-                      <span className="text-[10px] font-semibold leading-snug tracking-wide">
+                      <span className="text-[10px] font-semibold leading-snug tracking-[0.18em] uppercase">
                         {g.bucket || g.area}
                       </span>
                     </th>
@@ -193,7 +199,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                     g.products.map((p, pi) => (
                       <th
                         key={p}
-                        className={`px-1.5 py-2 text-center align-middle border-b border-slate-200 max-w-[4.5rem] ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} ${pi === 0 ? 'border-l border-l-slate-200' : ''}`}
+                        className={`px-1.5 py-2 text-center align-middle border-b border-slate-200 max-w-[4.5rem] ${AREA_HEADER_TINT[gi % AREA_HEADER_TINT.length]} ${pi === 0 ? 'border-l-[2px] border-l-white/90' : ''}`}
                       >
                         <span className="text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight block hyphens-auto">
                           {p}
@@ -273,7 +279,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
                             gi % 2 === 0
                               ? 'bg-white/30 dark:bg-slate-900/20'
                               : 'bg-slate-50/25 dark:bg-slate-800/20';
-                          const groupEdge = pi === 0 ? 'border-l border-l-slate-200/50 dark:border-l-slate-600/50' : '';
+                          const groupEdge = pi === 0 ? 'border-l-[2px] border-l-slate-200 dark:border-l-slate-600' : '';
                           return (
                             <Cell
                               key={p}

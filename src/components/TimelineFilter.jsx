@@ -13,6 +13,25 @@ function yearFromRelease(r) {
   return String(d).slice(0, 4);
 }
 
+function isoDate(value) {
+  return value.toISOString().slice(0, 10);
+}
+
+function quarterRange() {
+  const now = new Date();
+  const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+  const start = new Date(now.getFullYear(), quarterStartMonth, 1);
+  const end = new Date(now.getFullYear(), quarterStartMonth + 3, 0);
+  return { from: isoDate(start), to: isoDate(end) };
+}
+
+function nextDaysRange(days) {
+  const start = new Date();
+  const end = new Date();
+  end.setDate(end.getDate() + days);
+  return { from: isoDate(start), to: isoDate(end) };
+}
+
 export default function TimelineFilter() {
   const {
     allReleases,
@@ -35,6 +54,10 @@ export default function TimelineFilter() {
   }, [allReleases]);
 
   const hasCustomRange = !!(dateRange.from || dateRange.to);
+  const presets = [
+    { id: 'qtr', label: 'This quarter', range: quarterRange() },
+    { id: '90d', label: 'Next 90 days', range: nextDaysRange(90) },
+  ];
 
   return (
     <div className="mx-3 mt-2 sm:mx-4">
@@ -72,6 +95,26 @@ export default function TimelineFilter() {
         })}
 
         <span className="hidden sm:block w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" aria-hidden />
+
+        <div className="flex flex-wrap items-center gap-2">
+          {presets.map((preset) => {
+            const active = dateRange.from === preset.range.from && dateRange.to === preset.range.to;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setDateRange(preset.range)}
+                className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-all ${
+                  active
+                    ? 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200'
+                    : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:ring-bud-teal/40'
+                }`}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2 text-sm w-full sm:w-auto">
           <span className="text-slate-500 dark:text-slate-400 font-semibold">From</span>

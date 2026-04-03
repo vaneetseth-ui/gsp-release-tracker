@@ -3,7 +3,7 @@
  * Calls POST /api/query → tier-routed result (Tier 1–4)
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw, ExternalLink } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw, ExternalLink, ArrowUpRight } from 'lucide-react';
 import { api } from '../api.js';
 import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
 import { mondayCardTitle, mondayDescription, glipSummaryLine } from '../utils/releaseDisplay.js';
@@ -11,13 +11,28 @@ import JiraMondayLinks from './JiraMondayLinks.jsx';
 import GlipNotifyButton from './GlipNotifyButton.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
-const SUGGESTIONS = [
-  "What is MCM's Nova IVA status?",
-  'Which GSP Jira projects are not in Monday?',
-  'How many RCX projects does PMO manage with a schedule?',
-  'Top 5 AT&T projects',
-  'Show launch dates for all projects by row',
-  'Is Telus live on RCX?',
+const SUGGESTION_GROUPS = [
+  {
+    title: 'Partner Status',
+    prompts: [
+      "What is MCM's Nova IVA status?",
+      'Top 5 AT&T projects',
+    ],
+  },
+  {
+    title: 'Portfolio Scan',
+    prompts: [
+      'How many RCX projects does PMO manage with a schedule?',
+      'Show launch dates for all projects by row',
+    ],
+  },
+  {
+    title: 'Leadership Briefing',
+    prompts: [
+      'Which GSP Jira projects are not in Monday?',
+      'Is Telus live on RCX?',
+    ],
+  },
 ];
 
 const SEV_COLORS = {
@@ -486,16 +501,26 @@ export default function AskPanel() {
                 Pull a fast answer on partner status, blockers, schedule coverage, or unmanaged Jira items without leaving the tracker.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl">
-              {SUGGESTIONS.map((s, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleSubmit(s)}
-                  className="text-left px-4 py-3 rounded-2xl bg-white ring-1 ring-slate-200 hover:ring-bud-teal/40 hover:bg-cyan-50/30 transition-all text-xs text-slate-700 leading-snug font-medium shadow-sm"
-                >
-                  {s}
-                </button>
+            <div className="w-full max-w-3xl space-y-4">
+              {SUGGESTION_GROUPS.map((group) => (
+                <div key={group.title}>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {group.title}
+                  </p>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {group.prompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => handleSubmit(prompt)}
+                        className="flex items-start justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-left text-xs font-medium leading-snug text-slate-700 ring-1 ring-slate-200 shadow-sm transition-all hover:bg-cyan-50/30 hover:ring-bud-teal/40"
+                      >
+                        <span>{prompt}</span>
+                        <ArrowUpRight size={14} className="mt-0.5 flex-shrink-0 text-bud-teal" strokeWidth={2} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -528,7 +553,7 @@ export default function AskPanel() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Ask about a partner, product, exceptions, or say 'brief me on escalations'…"
+            placeholder="Brief me on this week's escalations, partner status, or schedule gaps…"
             className="flex-1 bg-transparent text-sm sm:text-base text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none leading-5 py-1 max-h-28 overflow-y-auto"
             style={{ minHeight: '1.25rem' }}
             disabled={loading}
@@ -537,7 +562,7 @@ export default function AskPanel() {
             type="button"
             onClick={() => handleSubmit()}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-10 h-10 rounded-2xl bg-bud-navy hover:bg-bud-purple disabled:bg-slate-200 dark:disabled:bg-slate-700 disabled:text-slate-400 text-white flex items-center justify-center transition-colors mb-0.5 shadow-sm shadow-slate-950/20"
+            className="mb-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-bud-teal text-white shadow-sm shadow-slate-950/20 transition-colors hover:bg-cyan-600 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-700"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
           </button>
