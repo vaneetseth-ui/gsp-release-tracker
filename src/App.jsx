@@ -15,9 +15,8 @@ import {
   CheckCircle,
   Sun,
   Moon,
-  Activity,
-  CalendarDays,
   Sparkles,
+  Search,
 } from 'lucide-react';
 import MatrixView      from './components/MatrixView.jsx';
 import PartnerView     from './components/PartnerView.jsx';
@@ -86,135 +85,187 @@ function ActionButton({ children, onClick, disabled, title, primary = false, ico
   );
 }
 
-function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
-  const { getSummary, getExceptions } = useData();
-  const { theme, toggleTheme } = useTheme();
-  const summary = getSummary();
-  const gapCount = getExceptions().length;
+function StatusWire({ syncStatus, total, withSchedule, gapCount }) {
   const wireItems = [
     { label: 'Monday', value: 'Authority', tone: 'text-emerald-300' },
-    { label: 'Portfolio', value: `${summary.total || 0} active`, tone: 'text-cyan-300' },
-    { label: 'Scheduled', value: `${summary.withSchedule || 0} dated`, tone: 'text-amber-300' },
+    { label: 'Portfolio', value: `${total || 0} active`, tone: 'text-cyan-300' },
+    { label: 'Scheduled', value: `${withSchedule || 0} dated`, tone: 'text-amber-300' },
     { label: 'Gaps', value: `${gapCount} open`, tone: gapCount > 0 ? 'text-orange-300' : 'text-emerald-300' },
     { label: 'Sync', value: syncStatus.lastSync || 'Pending', tone: 'text-slate-200' },
   ];
 
   return (
-    <header className="flex-shrink-0 px-3 pt-2 sm:px-4 sm:pt-3">
-      <div className="mx-auto max-w-[1180px]">
-        <div className="flex items-center gap-2 overflow-x-auto rounded-[18px] bg-bud-navy px-4 py-2 text-[11px] font-semibold text-slate-200 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.55)]">
-          {wireItems.map((item, idx) => (
-            <React.Fragment key={item.label}>
-              {idx > 0 ? <span className="text-slate-500">|</span> : null}
-              <span className="whitespace-nowrap uppercase tracking-[0.12em] text-slate-400">{item.label}:</span>
-              <span className={cn('whitespace-nowrap', item.tone)}>{item.value}</span>
-            </React.Fragment>
-          ))}
+    <div className="mx-3 mt-2 sm:mx-4 sm:mt-3">
+      <div className="mx-auto flex max-w-[1380px] items-center gap-2 overflow-x-auto rounded-[16px] bg-bud-navy px-4 py-2 text-[11px] font-semibold text-slate-200 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.55)]">
+        {wireItems.map((item, idx) => (
+          <React.Fragment key={item.label}>
+            {idx > 0 ? <span className="text-slate-500">|</span> : null}
+            <span className="whitespace-nowrap uppercase tracking-[0.12em] text-slate-400">{item.label}:</span>
+            <span className={cn('whitespace-nowrap', item.tone)}>{item.value}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LeftRail({ activeTab, onTabChange, gapCount }) {
+  return (
+    <aside className="hidden w-[220px] flex-shrink-0 lg:flex">
+      <div className="flex w-full flex-col rounded-[28px] border border-slate-200 bg-white p-4 shadow-soft">
+        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
+          <BuddAiMark compact />
+          <div className="min-w-0">
+            <p className="font-display text-xl font-bold tracking-tight text-slate-950">GSP Tracker</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">PMO command center</p>
+          </div>
         </div>
 
-        <div className="mt-2.5 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-soft">
-          <div className="flex flex-col gap-3 px-4 py-3 sm:px-5">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <BuddAiMark compact />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Powered By PMO BuddAI</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <h1 className="font-display text-[1.5rem] font-bold tracking-tight text-slate-950">
-                      GSP Release Tracker
-                    </h1>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                      PMO command center
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <StatPill icon={Activity} label="Active" value={summary.total || 0} tone="primary" />
-                <StatPill icon={CalendarDays} label="Scheduled" value={summary.withSchedule || 0} tone="success" />
-                <StatPill icon={CheckCircle} label="GA" value={summary.byStage.GA || 0} tone="accent" />
-                <StatPill icon={AlertCircle} label="Gaps" value={gapCount} tone={gapCount > 0 ? 'warning' : 'default'} />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
-                  <p className="mt-0.5 text-sm font-semibold text-slate-950">
-                    {syncStatus.lastSync || 'Waiting for health check'}
-                  </p>
-                </div>
-                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
-                  Monday authority
+        <nav className="mt-4 flex flex-col gap-1.5">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                className={cn(
+                  'flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold transition-all',
+                  isActive ? 'bg-bud-navy text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <span className="flex items-center gap-3">
+                  <span className={cn('flex h-9 w-9 items-center justify-center rounded-2xl', isActive ? 'bg-white/10' : 'bg-slate-100')}>
+                    <Icon size={18} strokeWidth={2} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} />
+                  </span>
+                  <span>{tab.label}</span>
                 </span>
-                <ActionButton
-                  primary
-                  icon={Sparkles}
-                  onClick={onSyncNow}
-                  disabled={syncStatus.checking}
-                  title="Start Monday-first sync on the server"
-                >
-                  {syncStatus.checking ? 'Syncing…' : 'Sync'}
-                </ActionButton>
-                <ActionButton
-                  icon={RefreshCw}
-                  onClick={onRefresh}
-                  disabled={syncStatus.checking}
-                  title="Reload cached releases from the API"
-                >
-                  Refresh
-                </ActionButton>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition-colors hover:bg-slate-50"
-                  aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-                >
-                  {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
-                </button>
-              </div>
-            </div>
+                {tab.id === 'exceptions' ? (
+                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900')}>
+                    {gapCount}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </aside>
+  );
+}
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2.5 text-[11px] font-semibold text-slate-600">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">GA {summary.byStage.GA || 0}</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Beta {summary.byStage.Beta || 0}</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">EAP {summary.byStage.EAP || 0}</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Dev {summary.byStage.Dev || 0}</span>
-              <span className="ml-auto hidden text-xs font-semibold text-slate-500 sm:inline">Operational views</span>
-            </div>
+function MobileTabBar({ activeTab, onTabChange, gapCount }) {
+  return (
+    <nav className="mx-3 mt-2 flex gap-2 overflow-x-auto rounded-[20px] border border-slate-200 bg-white p-1.5 shadow-soft sm:mx-4 lg:hidden">
+      {TABS.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onTabChange(tab.id)}
+            className={cn(
+              'flex min-w-[110px] items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition-all',
+              isActive ? 'bg-bud-navy text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
+            )}
+          >
+            <Icon size={16} strokeWidth={2} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} />
+            <span>{tab.label}</span>
+            {tab.id === 'exceptions' && gapCount > 0 ? (
+              <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900')}>
+                {gapCount}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
 
-            <nav className="flex flex-wrap gap-2 border-t border-slate-200 pt-2.5">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => onTabChange(tab.id)}
-                    className={`group flex min-w-[112px] flex-1 items-center justify-center gap-2 rounded-[18px] px-3 py-2 text-center text-sm font-semibold transition-all sm:flex-none ${
-                      isActive
-                        ? 'bg-bud-navy text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
-                  >
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
-                      <Icon size={17} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span>{tab.label}</span>
-                      {tab.id === 'exceptions' && gapCount > 0 && (
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900'}`}>
-                          {gapCount}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+function TopToolbar({
+  activeTab,
+  onRefresh,
+  onSyncNow,
+  syncStatus,
+  query,
+  setQuery,
+  onQuickJump,
+  quickJumpOptions,
+}) {
+  const { theme, toggleTheme } = useTheme();
+  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || 'Overview';
+
+  return (
+    <header className="px-3 pt-2 sm:px-4 sm:pt-3">
+      <div className="mx-auto flex max-w-[1380px] flex-wrap items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-3 shadow-soft">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-950">{activeTabLabel}</h1>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+              Monday-first operations
+            </span>
           </div>
+        </div>
+
+        <form onSubmit={onQuickJump} className="order-3 w-full min-w-0 lg:order-none lg:w-[420px]">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <Search size={16} className="text-slate-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              list="toolbar-quick-jump"
+              placeholder="Jump to partner, Jira key, or release"
+              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            />
+            <button type="submit" className="rounded-xl bg-bud-navy px-3 py-1.5 text-xs font-semibold text-white">
+              Go
+            </button>
+          </div>
+          <datalist id="toolbar-quick-jump">
+            {quickJumpOptions.map((option) => (
+              <option key={option.value} value={option.value} />
+            ))}
+          </datalist>
+        </form>
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
+            <p className="mt-0.5 text-sm font-semibold text-slate-950">
+              {syncStatus.lastSync || 'Waiting'}
+            </p>
+          </div>
+          <ActionButton
+            primary
+            icon={Sparkles}
+            onClick={onSyncNow}
+            disabled={syncStatus.checking}
+            title="Start Monday-first sync on the server"
+          >
+            {syncStatus.checking ? 'Syncing…' : 'Sync'}
+          </ActionButton>
+          <ActionButton
+            icon={RefreshCw}
+            onClick={onRefresh}
+            disabled={syncStatus.checking}
+            title="Reload cached releases from the API"
+          >
+            Refresh
+          </ActionButton>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition-colors hover:bg-slate-50"
+            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+          </button>
         </div>
       </div>
     </header>
@@ -237,10 +288,13 @@ function formatSyncTime(isoString) {
 }
 
 export default function App() {
-  const { refresh: refreshReleases, dataStatus, loadError, loading: releasesLoading } = useData();
+  const { refresh: refreshReleases, dataStatus, loadError, loading: releasesLoading, allReleases, getSummary, getExceptions } = useData();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ checking: false, lastSync: null });
+  const [quickJumpQuery, setQuickJumpQuery] = useState('');
+  const summary = getSummary();
+  const gapCount = getExceptions().length;
 
   const fetchHealth = useCallback(() => {
     return fetch('/api/health')
@@ -316,6 +370,44 @@ export default function App() {
   }, [refreshReleases, fetchHealth]);
 
   const panelOpen = !!selectedPartner;
+  const quickJumpOptions = React.useMemo(() => {
+    const seen = new Set();
+    const options = [];
+    for (const release of allReleases) {
+      const value = [release.partner, release.product, release.jira_number].filter(Boolean).join(' · ');
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      options.push({ value, partner: release.partner });
+      if (options.length >= 12) break;
+    }
+    return options;
+  }, [allReleases]);
+
+  const handleQuickJump = useCallback((event) => {
+    event.preventDefault();
+    const query = quickJumpQuery.trim().toLowerCase();
+    if (!query) return;
+
+    const exact = quickJumpOptions.find((option) => option.value.toLowerCase() === query);
+    const match = exact
+      ? allReleases.find((release) => release.partner === exact.partner)
+      : allReleases.find((release) =>
+          [
+            release.partner,
+            release.product,
+            release.jira_number,
+            release.project_title,
+            release.tracker_project_title,
+          ]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query))
+        );
+
+    if (!match) return;
+    setActiveTab('portfolio');
+    setSelectedPartner(match.partner);
+    setQuickJumpQuery('');
+  }, [allReleases, quickJumpOptions, quickJumpQuery]);
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-transparent text-base">
@@ -324,19 +416,34 @@ export default function App() {
         <div className="absolute right-[-8%] top-[8%] h-72 w-72 rounded-full bg-bud-purple/8 blur-3xl" />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        <Header
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onRefresh={handleRefresh}
-          onSyncNow={handleSyncNow}
-          syncStatus={syncStatus}
-        />
+      <StatusWire
+        syncStatus={syncStatus}
+        total={summary.total || 0}
+        withSchedule={summary.withSchedule || 0}
+        gapCount={gapCount}
+      />
 
-        {!['ask', 'changelog'].includes(activeTab) && <TimelineFilter />}
+      <div className="relative flex min-h-0 flex-1 gap-3 overflow-hidden px-3 pb-3 sm:px-4 sm:pb-4">
+        <LeftRail activeTab={activeTab} onTabChange={setActiveTab} gapCount={gapCount} />
 
-        <div className="flex flex-1 gap-3 overflow-hidden px-3 pb-3 sm:px-4 sm:pb-4">
-          <main className="glass-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.3)]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <TopToolbar
+            activeTab={activeTab}
+            onRefresh={handleRefresh}
+            onSyncNow={handleSyncNow}
+            syncStatus={syncStatus}
+            query={quickJumpQuery}
+            setQuery={setQuickJumpQuery}
+            onQuickJump={handleQuickJump}
+            quickJumpOptions={quickJumpOptions}
+          />
+
+          <MobileTabBar activeTab={activeTab} onTabChange={setActiveTab} gapCount={gapCount} />
+
+          {!['ask', 'changelog'].includes(activeTab) && <TimelineFilter />}
+
+          <div className="flex min-h-0 flex-1 gap-3 overflow-hidden pt-2">
+            <main className="glass-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.3)]">
             {activeTab === 'overview' && (
               <OverviewDashboard
                 onSelectPartner={handleSelectPartner}
@@ -361,62 +468,63 @@ export default function App() {
             {activeTab === 'changelog' && (
               <ChangelogFeed onSelectPartner={handleSelectPartner} />
             )}
-          </main>
+            </main>
 
-          <div
-            className={`glass-panel hidden flex-shrink-0 overflow-hidden rounded-[28px] border border-slate-200 shadow-panel transition-all duration-300 ease-out lg:block ${
-              panelOpen ? 'w-[420px]' : 'w-0 border-transparent shadow-none'
-            }`}
-          >
-            {panelOpen && (
-              <PartnerView
-                partner={selectedPartner}
-                onClose={() => setSelectedPartner(null)}
-              />
-            )}
-          </div>
-        </div>
-
-        {panelOpen && (
-          <div className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden">
-            <div className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
-              <PartnerView
-                partner={selectedPartner}
-                onClose={() => setSelectedPartner(null)}
-              />
+            <div
+              className={`glass-panel hidden flex-shrink-0 overflow-hidden rounded-[28px] border border-slate-200 shadow-panel transition-all duration-300 ease-out xl:block ${
+                panelOpen ? 'w-[400px]' : 'w-0 border-transparent shadow-none'
+              }`}
+            >
+              {panelOpen && (
+                <PartnerView
+                  partner={selectedPartner}
+                  onClose={() => setSelectedPartner(null)}
+                />
+              )}
             </div>
           </div>
-        )}
 
-        <div className="mx-3 mb-3 flex flex-shrink-0 flex-wrap items-center justify-between gap-2 rounded-[22px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-soft sm:mx-4 sm:mb-4">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-2">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  releasesLoading
-                    ? 'bg-slate-400 animate-pulse'
+          {panelOpen && (
+            <div className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] xl:hidden">
+              <div className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+                <PartnerView
+                  partner={selectedPartner}
+                  onClose={() => setSelectedPartner(null)}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-shrink-0 flex-wrap items-center justify-between gap-2 rounded-[22px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-soft">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    releasesLoading
+                      ? 'bg-slate-400 animate-pulse'
+                      : dataStatus === 'live'
+                        ? 'bg-bud-green ring-4 ring-emerald-400/15'
+                        : dataStatus === 'error'
+                          ? 'bg-red-500 ring-4 ring-red-400/20'
+                          : 'bg-bud-orange ring-4 ring-orange-400/15'
+                  }`}
+                />
+                <span className="font-semibold text-slate-900">
+                  {releasesLoading
+                    ? 'Loading releases…'
                     : dataStatus === 'live'
-                      ? 'bg-bud-green ring-4 ring-emerald-400/15'
+                      ? 'Live cache ready'
                       : dataStatus === 'error'
-                        ? 'bg-red-500 ring-4 ring-red-400/20'
-                        : 'bg-bud-orange ring-4 ring-orange-400/15'
-                }`}
-              />
-              <span className="font-semibold text-slate-900">
-                {releasesLoading
-                  ? 'Loading releases…'
-                  : dataStatus === 'live'
-                    ? 'Live cache ready'
-                    : dataStatus === 'error'
-                      ? `Load failed${loadError ? `: ${loadError}` : ''}`
-                      : 'No release rows from API'}
+                        ? `Load failed${loadError ? `: ${loadError}` : ''}`
+                        : 'No release rows from API'}
+                </span>
               </span>
-            </span>
-            <span className="hidden text-slate-500 sm:inline">
-              Monday · Jira · Confluence · Sheets · Postgres
-            </span>
+              <span className="hidden text-slate-500 sm:inline">
+                Monday · Jira · Confluence · Sheets · Postgres
+              </span>
+            </div>
+            {panelOpen && <span className="hidden xl:inline text-slate-500">{selectedPartner}</span>}
           </div>
-          {panelOpen && <span className="hidden lg:inline text-slate-500">{selectedPartner}</span>}
         </div>
       </div>
     </div>
