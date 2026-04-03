@@ -136,6 +136,21 @@ function ReleaseCard({ release, computeGapsForRelease }) {
         </div>
       )}
 
+      {(release.jira_status || release.project_title || release.impact_summary) && (
+        <div className="rounded-xl bg-slate-50 px-3 py-3 ring-1 ring-slate-200/80">
+          <div className="flex flex-wrap items-center gap-2">
+            {release.jira_status ? <StatusBadge status={release.jira_status} className="normal-case tracking-normal" /> : null}
+            {release.jira_number ? <span className="font-mono text-xs text-slate-500">{release.jira_number}</span> : null}
+          </div>
+          {release.project_title ? (
+            <p className="mt-2 text-sm font-semibold text-slate-900">{release.project_title}</p>
+          ) : null}
+          {release.impact_summary ? (
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">{release.impact_summary}</p>
+          ) : null}
+        </div>
+      )}
+
       {gaps.length > 0 && (
         <div className="rounded-lg bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
           <span className="font-bold text-slate-500">Data gaps: </span>

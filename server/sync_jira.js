@@ -81,6 +81,17 @@ const STATUS_TO_STAGE = {
   'on hold':         'OnHold',
 };
 
+function impactFromDescription(desc) {
+  if (!desc) return null;
+  const text = String(desc)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return null;
+  const parts = text.split(/(?<=[.!?])\s+/).slice(0, 2);
+  return parts.join(' ').slice(0, 400) || null;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeStage(statusName = '') {
@@ -164,6 +175,11 @@ function transformIssue(issue, index) {
   // Dates
   const target_date = f.duedate      || null;
   const actual_date = f.resolutiondate ? f.resolutiondate.split('T')[0] : null;
+  const desc_raw = typeof f.description === 'string'
+    ? f.description
+    : f.description != null
+      ? JSON.stringify(f.description)
+      : null;
 
   // ARR at risk (custom field or parsed from labels)
   let arr_at_risk = getCustomField(issue, FIELD_MAP.arr);
@@ -184,17 +200,22 @@ function transformIssue(issue, index) {
     stage,
     pmo_status: null,
     jira_status: f.status?.name || null,
+    project_title: summary || null,
+    impact_summary: impactFromDescription(desc_raw),
+    desc_raw,
     target_date,
     actual_date,
     jira_number:  issue.key,
     pm,
     se_lead,
     csm,
-    notes:        f.description ? String(f.description).slice(0, 200).replace(/\n/g, ' ') : null,
+    notes:        summary ? String(summary).slice(0, 200) : null,
     arr_at_risk:  arr_at_risk ? Number(arr_at_risk) : null,
     monday_url: monday_url ? String(monday_url).trim() || null : null,
     monday_item_id: monday_item_id ? String(monday_item_id).trim() || null : null,
     source: 'jira',
+    is_unmanaged_jira: 1,
+    include_in_matrix: 0,
     // raw for debugging
     _status_raw:  f.status?.name,
     _summary_raw: summary,

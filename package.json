@@ -18,6 +18,7 @@
     "seed": "node server/seed.js",
     "start": "node server/index.js",
     "sync": "node scripts/sync-local.js",
+    "sync:jira:push": "node scripts/sync-jira-push.mjs",
     "sync:confluence": "node scripts/sync-confluence.js",
     "sync:confluence:local": "node scripts/confluence-ingest-local.mjs",
     "sync:confluence:merge-push": "node scripts/confluence-local-merge-push.mjs",

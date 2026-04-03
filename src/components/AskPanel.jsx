@@ -97,6 +97,12 @@ function Tier1Result({ result }) {
               <p className="font-medium">{r.se_lead}</p>
             </div>
           )}
+          {r.jira_status && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">Jira Status</p>
+              <div><StatusBadge status={r.jira_status} className="normal-case tracking-normal" /></div>
+            </div>
+          )}
           {r.market_type && (
             <div>
               <p className="text-xs text-slate-400 mb-0.5">Market Type</p>
@@ -132,6 +138,18 @@ function Tier1Result({ result }) {
                   <span className="font-medium font-mono text-slate-600 text-sm">{r.jira_number || r.jira}</span>
                 )}
               </div>
+            </div>
+          )}
+          {r.project_title && (
+            <div className="col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Jira Title</p>
+              <p className="text-sm text-slate-700">{r.project_title}</p>
+            </div>
+          )}
+          {r.impact_summary && (
+            <div className="col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Impact Summary</p>
+              <p className="text-sm text-slate-700">{r.impact_summary}</p>
             </div>
           )}
         </div>

@@ -298,6 +298,106 @@ export async function mergeConfluenceReleases(confluenceRows) {
   return { added, updated, skipped, total: store.releases.length };
 }
 
+function jiraKey(r) {
+  const key = r?.jira_number ?? r?.jira_key ?? null;
+  return key && String(key).trim() ? String(key).trim().toUpperCase() : null;
+}
+
+function jiraOnlyRow(r) {
+  const src = String(r?.source || '').toLowerCase();
+  const releaseKey = String(r?.release_key || '');
+  return flag(r?.is_unmanaged_jira) || src === 'jira' || releaseKey.startsWith('jira-only:');
+}
+
+export function mergeJiraIntoExisting(existingReleases, jiraRows) {
+  const baseReleases = (existingReleases || []).filter((r) => !jiraOnlyRow(r));
+  const releases = baseReleases.map((r) => normalizeRelease(r));
+  const byJiraKey = new Map();
+  for (const release of releases) {
+    const key = jiraKey(release);
+    if (key) byJiraKey.set(key, release);
+  }
+
+  let linked = 0;
+  let unmanaged = 0;
+  let updated = 0;
+
+  for (const raw of jiraRows || []) {
+    const jiraRelease = normalizeRelease({
+      ...raw,
+      source: 'jira',
+      is_unmanaged_jira: 1,
+      include_in_matrix: 0,
+    });
+    const key = jiraKey(jiraRelease);
+    if (!key) continue;
+
+    const existing = byJiraKey.get(key);
+    if (existing) {
+      existing.jira_status = jiraRelease.jira_status ?? existing.jira_status ?? null;
+      existing.project_title = jiraRelease.project_title ?? existing.project_title ?? null;
+      existing.impact_summary = jiraRelease.impact_summary ?? existing.impact_summary ?? null;
+      existing.desc_raw = jiraRelease.desc_raw ?? existing.desc_raw ?? null;
+      existing.notes = jiraRelease.notes ?? existing.notes ?? null;
+      if (!existing.target_date && jiraRelease.target_date) existing.target_date = jiraRelease.target_date;
+      if (!existing.actual_date && jiraRelease.actual_date) existing.actual_date = jiraRelease.actual_date;
+      if (!existing.pm && jiraRelease.pm) existing.pm = jiraRelease.pm;
+      if (!existing.se_lead && jiraRelease.se_lead) existing.se_lead = jiraRelease.se_lead;
+      if (!existing.csm && jiraRelease.csm) existing.csm = jiraRelease.csm;
+      if (!existing.arr_at_risk && jiraRelease.arr_at_risk != null) existing.arr_at_risk = jiraRelease.arr_at_risk;
+      existing.is_unmanaged_jira = 0;
+      existing.include_in_matrix = existing.include_in_matrix === 0 ? 0 : 1;
+      linked++;
+      updated++;
+      continue;
+    }
+
+    releases.push(jiraRelease);
+    byJiraKey.set(key, jiraRelease);
+    unmanaged++;
+    updated++;
+  }
+
+  return {
+    releases: releases.map((r) => normalizeRelease(r)),
+    linked,
+    unmanaged,
+    updated,
+  };
+}
+
+export async function mergeJiraReleases(jiraRows, meta = null) {
+  if (!jiraRows?.length) {
+    return { linked: 0, unmanaged: 0, updated: 0, total: R().length };
+  }
+
+  const { releases, linked, unmanaged, updated } = mergeJiraIntoExisting(R(), jiraRows);
+  store.releases = releases;
+  const lastSync = meta?.fetchedAt || new Date().toISOString();
+  store.lastSync = lastSync;
+  store.dataSource = process.env.DATABASE_URL ? 'postgres' : 'memory';
+  if (meta && typeof meta === 'object') {
+    store.lastIngestMeta = {
+      ...(store.lastIngestMeta || {}),
+      jiraSupplement: meta,
+    };
+  }
+
+  try {
+    await replaceAllData({
+      releases: store.releases,
+      changelog: null,
+      lastSync,
+      ingestMeta: store.lastIngestMeta,
+    });
+  } catch (e) {
+    console.error('mergeJiraReleases: persist failed:', e.message);
+    throw e;
+  }
+
+  return { linked, unmanaged, updated, total: store.releases.length, lastSync };
+}
+
 function normalizeChangelog(c) {
   return {
     id: c.id,

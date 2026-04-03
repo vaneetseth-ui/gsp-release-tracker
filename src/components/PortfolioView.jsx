@@ -101,6 +101,17 @@ function MobileCard({ release, onSelectPartner }) {
           </a>
         ) : null}
       </div>
+      {release.jira_status || release.project_title ? (
+        <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {release.jira_status ? <StatusBadge status={release.jira_status} /> : null}
+            {release.jira_number ? <span className="font-mono text-xs text-slate-500">{release.jira_number}</span> : null}
+          </div>
+          {release.project_title ? (
+            <p className="mt-2 text-sm text-slate-600">{release.project_title}</p>
+          ) : null}
+        </div>
+      ) : null}
       {mondayDescriptionPreview(release, 120) ? (
         <p className="mt-3 text-sm leading-relaxed text-slate-600">{mondayDescriptionPreview(release, 120)}</p>
       ) : null}
@@ -266,6 +277,11 @@ export default function PortfolioView({ onSelectPartner }) {
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={release.pmo_status || release.stage} />
+                          {release.jira_status ? (
+                            <div className="mt-2">
+                              <StatusBadge status={release.jira_status} className="normal-case tracking-normal" />
+                            </div>
+                          ) : null}
                           {release.commentStale ? (
                             <p className="mt-2 text-xs font-semibold text-violet-700">Stale note</p>
                           ) : null}
@@ -281,6 +297,9 @@ export default function PortfolioView({ onSelectPartner }) {
                         </td>
                         <td className="px-4 py-3">
                           <JiraMondayLinks jiraLinks={release.jiraLinks || []} mondayUrl={release.mondayUrl} compact />
+                          {release.jira_number && !release.jiraLinks?.length ? (
+                            <p className="mt-2 font-mono text-xs text-slate-500">{release.jira_number}</p>
+                          ) : null}
                           {release.schedule_url && /^https?:\/\//i.test(release.schedule_url) ? (
                             <a
                               href={release.schedule_url}
@@ -291,6 +310,11 @@ export default function PortfolioView({ onSelectPartner }) {
                               Schedule
                               <ExternalLink size={11} strokeWidth={2} />
                             </a>
+                          ) : null}
+                          {release.project_title ? (
+                            <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500">
+                              {release.project_title}
+                            </p>
                           ) : null}
                         </td>
                       </tr>

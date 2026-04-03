@@ -14,6 +14,7 @@ import 'dotenv/config';
  *   POST /api/query             — natural language query → tier-routed result
  *   POST /api/ingest            — push releases from a trusted client (optional Bearer INGEST_TOKEN)
  *   POST /api/sync/monday       — Monday-first sync directly from server env (optional Jira supplement)
+ *   POST /api/sync/jira         — Jira supplement merge (server-side if reachable, or trusted push body)
  *   POST /api/sync/confluence   — fetch configured wiki pages, parse tables, merge (Bearer INGEST_TOKEN if set)
  *   POST /api/sync/all          — Monday-first ingest then Confluence merge (if configured); optional Bearer INGEST_TOKEN
  */
@@ -25,6 +26,7 @@ import { fileURLToPath } from 'url';
 import * as db from './db.js';
 import { runConfluenceIngestBuild, CONFLUENCE_PAGES } from './confluence/ingest.js';
 import { runMondayFirstSync } from './sync_monday.js';
+import { syncFromJira } from './sync_jira.js';
 import { postGlipMessage, formatNotifyCardPayload } from './glip.js';
 import { runAskQuery } from './askEngine.js';
 
@@ -114,6 +116,47 @@ app.post('/api/sync/monday', async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/sync/jira', async (req, res) => {
+  if (!requireIngestAuth(req, res)) return;
+  try {
+    let bundle;
+    if (Array.isArray(req.body?.releases) && req.body.releases.length > 0) {
+      bundle = {
+        releases: req.body.releases,
+        fetchedAt: req.body.fetchedAt || new Date().toISOString(),
+        totalIssues: req.body.totalIssues ?? req.body.releases.length,
+        projects: req.body.projects || ['GSP'],
+        jql: req.body.jql || ['project = GSP AND resolution = Unresolved ORDER BY priority DESC, updated DESC'],
+        pushed: true,
+      };
+    } else {
+      bundle = await syncFromJira();
+    }
+
+    const result = await db.mergeJiraReleases(bundle.releases, {
+      fetchedAt: bundle.fetchedAt,
+      totalIssues: bundle.totalIssues,
+      projects: bundle.projects,
+      jql: bundle.jql,
+      pushed: !!bundle.pushed,
+    });
+
+    res.json({
+      ok: true,
+      totalIssues: bundle.totalIssues,
+      linked: result.linked,
+      unmanaged: result.unmanaged,
+      total: result.total,
+      lastSync: result.lastSync,
+      pushed: !!bundle.pushed,
+    });
+  } catch (e) {
+    const message = e?.message || String(e);
+    const status = /JIRA_PAT environment variable is not set/i.test(message) ? 501 : 500;
+    res.status(status).json({ ok: false, error: message });
   }
 });
 
