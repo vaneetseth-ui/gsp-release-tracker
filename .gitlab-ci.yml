@@ -1,15 +1,20 @@
-# .gitlab-ci.yml — GSP Release Tracker: Jira → Heroku sync
+# .gitlab-ci.yml — GSP Release Tracker GitLab pipeline
 #
 # Runs inside RingCentral corporate network so it can reach jira.ringcentral.com.
-# Triggers:
-#   • Scheduled pipeline (every hour — set up in GitLab → Build → Schedules)
-#   • Manual run (GitLab → Build → Pipelines → Run pipeline)
+# Includes GitLab's SAST template and the existing Jira -> Heroku sync job.
 #
-# Required CI/CD variable (GitLab → Settings → CI/CD → Variables):
-#   JIRA_PAT   — your Jira Personal Access Token (mark as Masked + Protected)
+# Required CI/CD variable:
+#   JIRA_PAT — Jira Personal Access Token (masked + protected)
 
 stages:
+  - test
   - sync
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+sast:
+  stage: test
 
 sync-jira:
   stage: sync
@@ -17,18 +22,17 @@ sync-jira:
   timeout: 10 minutes
 
   variables:
-    JIRA_URL:   "https://jira.ringcentral.com"
+    JIRA_URL: "https://jira.ringcentral.com"
     HEROKU_URL: "https://gsp-release-tracker-ffa0c1ec9485.herokuapp.com"
-    # JIRA_PAT is injected from CI/CD Variables (masked) — never hardcode it here
 
   script:
-    - echo "Starting Jira → Heroku sync at $(date -u)"
+    - echo "Starting Jira -> Heroku sync at $(date -u)"
     - node scripts/sync-local.js
 
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # hourly scheduled run
-    - if: '$CI_PIPELINE_SOURCE == "web"'         # manual trigger from GitLab UI
-    - if: '$CI_PIPELINE_SOURCE == "api"'         # trigger via API if needed
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "api"'
 
   after_script:
     - echo "Pipeline finished at $(date -u) with exit code $CI_JOB_STATUS"
