@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   RefreshCw,
-  CheckCircle,
   Sun,
   Moon,
   Sparkles,
@@ -40,32 +39,6 @@ const TABS = [
   { id: 'changelog',  label: 'Changes',    icon: Clock },
 ];
 
-function StatPill({ icon: Icon, label, value, tone = 'default' }) {
-  const toneClass = {
-    primary: 'border-cyan-100 bg-cyan-50/80 text-cyan-900',
-    accent: 'border-violet-100 bg-violet-50/80 text-violet-900',
-    success: 'border-emerald-100 bg-emerald-50/80 text-emerald-900',
-    warning: 'border-orange-100 bg-orange-50/85 text-orange-900',
-    default: 'border-slate-200 bg-slate-50 text-slate-900',
-  }[tone] || 'border-slate-100 bg-white';
-
-  return (
-    <div className={cn('min-w-[112px] rounded-2xl border px-2.5 py-2 shadow-sm', toneClass)}>
-      <div className="flex items-center gap-2">
-        <span className={cn('flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl', tone === 'warning' ? 'bg-orange-500' : tone === 'accent' ? 'bg-violet-500' : tone === 'success' ? 'bg-emerald-500' : 'bg-cyan-500')}>
-            <Icon size={13} strokeWidth={2.1} className="text-white" />
-        </span>
-        <div className="min-w-0">
-          <div className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            {label}
-          </div>
-          <div className="font-mono text-lg font-semibold leading-none tracking-tight text-slate-950">{value}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ActionButton({ children, onClick, disabled, title, primary = false, icon: Icon }) {
   return (
     <button
@@ -82,30 +55,6 @@ function ActionButton({ children, onClick, disabled, title, primary = false, ico
       {Icon ? <Icon size={16} strokeWidth={2} className="text-bud-teal" /> : null}
       {children}
     </button>
-  );
-}
-
-function StatusWire({ syncStatus, total, withSchedule, gapCount }) {
-  const wireItems = [
-    { label: 'Monday', value: 'Authority', tone: 'text-emerald-300' },
-    { label: 'Portfolio', value: `${total || 0} active`, tone: 'text-cyan-300' },
-    { label: 'Scheduled', value: `${withSchedule || 0} dated`, tone: 'text-amber-300' },
-    { label: 'Gaps', value: `${gapCount} open`, tone: gapCount > 0 ? 'text-orange-300' : 'text-emerald-300' },
-    { label: 'Sync', value: syncStatus.lastSync || 'Pending', tone: 'text-slate-200' },
-  ];
-
-  return (
-    <div className="mx-3 mt-2 sm:mx-4 sm:mt-3">
-      <div className="mx-auto flex max-w-[1380px] items-center gap-2 overflow-x-auto rounded-[16px] bg-bud-navy px-4 py-2 text-[11px] font-semibold text-slate-200 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.55)]">
-        {wireItems.map((item, idx) => (
-          <React.Fragment key={item.label}>
-            {idx > 0 ? <span className="text-slate-500">|</span> : null}
-            <span className="whitespace-nowrap uppercase tracking-[0.12em] text-slate-400">{item.label}:</span>
-            <span className={cn('whitespace-nowrap', item.tone)}>{item.value}</span>
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -415,13 +364,6 @@ export default function App() {
         <div className="absolute left-[-10%] top-[-18%] h-80 w-80 rounded-full bg-bud-teal/8 blur-3xl" />
         <div className="absolute right-[-8%] top-[8%] h-72 w-72 rounded-full bg-bud-purple/8 blur-3xl" />
       </div>
-
-      <StatusWire
-        syncStatus={syncStatus}
-        total={summary.total || 0}
-        withSchedule={summary.withSchedule || 0}
-        gapCount={gapCount}
-      />
 
       <div className="relative flex min-h-0 flex-1 gap-3 overflow-hidden px-3 pb-3 sm:px-4 sm:pb-4">
         <LeftRail activeTab={activeTab} onTabChange={setActiveTab} gapCount={gapCount} />
