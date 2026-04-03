@@ -51,17 +51,17 @@ function StatPill({ icon: Icon, label, value, tone = 'default' }) {
   }[tone] || 'border-slate-100 bg-white';
 
   return (
-    <div className={cn('rounded-2xl border px-3.5 py-3 shadow-sm', toneClass)}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl', tone === 'warning' ? 'bg-orange-500' : tone === 'accent' ? 'bg-violet-500' : tone === 'success' ? 'bg-emerald-500' : 'bg-cyan-500')}>
-              <Icon size={14} strokeWidth={2.1} className="text-white" />
-            </span>
+    <div className={cn('rounded-xl border px-2.5 py-2 shadow-sm', toneClass)}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn('flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg', tone === 'warning' ? 'bg-orange-500' : tone === 'accent' ? 'bg-violet-500' : tone === 'success' ? 'bg-emerald-500' : 'bg-cyan-500')}>
+            <Icon size={13} strokeWidth={2.1} className="text-white" />
+          </span>
+          <div className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             {label}
           </div>
         </div>
-        <div className="font-mono text-2xl font-semibold leading-none tracking-tight text-slate-950">{value}</div>
+        <div className="font-mono text-xl font-semibold leading-none tracking-tight text-slate-950">{value}</div>
       </div>
     </div>
   );
@@ -74,7 +74,7 @@ function ActionButton({ children, onClick, disabled, title, primary = false, ico
       onClick={onClick}
       title={title}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+      className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
         primary
           ? 'bg-bud-navy text-white hover:bg-slate-800 shadow-sm'
           : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
@@ -96,36 +96,51 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
     <header className="flex-shrink-0 px-3 pt-2 sm:px-4 sm:pt-3">
       <div className="mx-auto max-w-[1180px]">
         <div className="hero-sheen relative overflow-hidden rounded-[30px] border border-slate-800/60 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]">
-          <div className="relative grid items-start gap-3 px-5 py-4 sm:px-6 sm:py-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="relative grid items-center gap-3 px-4 py-3 sm:px-5 lg:grid-cols-[260px_minmax(0,1fr)_280px]">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3 lg:justify-start">
                 <div className="min-w-0">
-                  <div className="mb-2 flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <BuddAiMark compact />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Powered By</p>
-                      <p className="font-display text-lg font-bold text-white">PMO <span className="text-bud-teal">BuddAI</span></p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Powered By</p>
+                      <p className="font-display text-base font-bold text-white">PMO <span className="text-bud-teal">BuddAI</span></p>
                     </div>
                   </div>
-                  <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-[1.85rem]">
-                    GSP Release Tracker
-                  </h1>
-                  <p className="mt-1.5 max-w-xl text-sm font-medium leading-relaxed text-slate-300">
-                    Monday-first release intelligence for PMO leadership, partner planning, and operational triage.
-                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={toggleTheme}
                   title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 p-3 text-white transition-colors hover:bg-white/12"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 p-2.5 text-white transition-colors hover:bg-white/12 lg:hidden"
                   aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
                 >
                   {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
                 </button>
               </div>
+              <div className="min-w-0">
+                <h1 className="font-display text-[1.7rem] font-bold tracking-tight text-white sm:text-[1.9rem] lg:text-[1.75rem]">
+                  GSP Release Tracker
+                </h1>
+                <p className="max-w-sm text-[12.5px] font-medium leading-relaxed text-slate-300">
+                  Monday-first release intelligence for partner planning and PMO visibility.
+                </p>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+              <div className="hidden justify-end lg:flex xl:hidden">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 p-2.5 text-white transition-colors hover:bg-white/12"
+                  aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                >
+                  {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+                </button>
+              </div>
+              <div className="contents xl:contents">
                 <StatPill icon={Activity} label="Active" value={summary.total || 0} tone="primary" />
                 <StatPill icon={CalendarDays} label="Scheduled" value={summary.withSchedule || 0} tone="success" />
                 <StatPill icon={CheckCircle} label="GA" value={summary.byStage.GA || 0} tone="accent" />
@@ -133,27 +148,27 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-200/80 bg-white p-3.5 text-slate-900 shadow-lg shadow-slate-950/10">
+            <div className="rounded-[22px] border border-slate-200/80 bg-white p-3 text-slate-900 shadow-lg shadow-slate-950/10">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-bud-teal">
                     Runtime Control
                   </p>
-                  <p className="mt-1.5 text-base font-display font-bold text-slate-950">Portfolio sync</p>
+                  <p className="mt-1 text-[15px] font-display font-bold text-slate-950">Portfolio sync</p>
                 </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
                   Monday authority
                 </span>
               </div>
 
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="mt-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Last sync</p>
                 <p className="mt-1 text-sm font-semibold text-slate-950">
                   {syncStatus.lastSync || 'Waiting for health check'}
                 </p>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-2.5 flex flex-wrap gap-2">
                 <ActionButton
                   primary
                   icon={Sparkles}
@@ -173,17 +188,17 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
                 </ActionButton>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">GA {summary.byStage.GA || 0}</span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">Beta {summary.byStage.Beta || 0}</span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">EAP {summary.byStage.EAP || 0}</span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">Dev {summary.byStage.Dev || 0}</span>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">GA {summary.byStage.GA || 0}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Beta {summary.byStage.Beta || 0}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">EAP {summary.byStage.EAP || 0}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Dev {summary.byStage.Dev || 0}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <nav className="mt-2.5 flex flex-wrap gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-soft">
+        <nav className="mt-2.5 flex flex-wrap gap-2 rounded-[24px] border border-slate-200 bg-white p-1.5 shadow-soft">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -192,14 +207,14 @@ function Header({ activeTab, onTabChange, onRefresh, onSyncNow, syncStatus }) {
                 key={tab.id}
                 type="button"
                 onClick={() => onTabChange(tab.id)}
-                className={`group flex min-w-[126px] flex-1 items-center justify-center gap-2 rounded-[18px] px-3.5 py-2.5 text-center text-sm font-semibold transition-all sm:flex-none ${
+                className={`group flex min-w-[118px] flex-1 items-center justify-center gap-2 rounded-[18px] px-3 py-2 text-center text-sm font-semibold transition-all sm:flex-none ${
                   isActive
                     ? 'bg-bud-navy text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <span className={`flex h-9 w-9 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
-                  <Icon size={18} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
+                <span className={`flex h-8 w-8 items-center justify-center rounded-2xl ${isActive ? 'bg-white/10' : 'bg-slate-100'}`}>
+                  <Icon size={17} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} strokeWidth={2} />
                 </span>
                 <span className="flex items-center gap-2">
                   <span>{tab.label}</span>

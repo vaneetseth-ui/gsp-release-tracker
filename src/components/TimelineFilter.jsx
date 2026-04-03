@@ -37,14 +37,14 @@ export default function TimelineFilter() {
   const hasCustomRange = !!(dateRange.from || dateRange.to);
 
   return (
-    <div className="mx-3 mt-3 sm:mx-4">
-      <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-2 rounded-[20px] border border-slate-200 bg-white px-4 py-3 shadow-soft">
+    <div className="mx-3 mt-2 sm:mx-4">
+      <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-2 rounded-[20px] border border-slate-200 bg-white px-4 py-2.5 shadow-soft">
         <Calendar size={16} className="text-bud-purple dark:text-bud-teal shrink-0" strokeWidth={2} />
 
         <button
           type="button"
           onClick={clearTimelineFilter}
-          className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
             !isFiltered
               ? 'bg-bud-navy text-white shadow-sm'
               : 'bg-slate-50 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 hover:ring-bud-teal/40'
@@ -60,7 +60,7 @@ export default function TimelineFilter() {
               key={y}
               type="button"
               onClick={() => toggleYear(y)}
-              className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
                 active
                   ? 'bg-bud-navy text-white shadow-sm'
                   : 'bg-slate-50 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 hover:ring-bud-teal/40'
@@ -79,14 +79,14 @@ export default function TimelineFilter() {
             type="date"
             value={dateRange.from || ''}
             onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value || null }))}
-            className="px-3 py-2 rounded-xl text-sm text-slate-800 dark:text-slate-100 bg-white ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-bud-teal/40 min-w-0 flex-1 sm:flex-none sm:w-[148px]"
+            className="px-3 py-1.5 rounded-xl text-sm text-slate-800 dark:text-slate-100 bg-white ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-bud-teal/40 min-w-0 flex-1 sm:flex-none sm:w-[148px]"
           />
           <span className="text-slate-500 dark:text-slate-400 font-semibold">To</span>
           <input
             type="date"
             value={dateRange.to || ''}
             onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value || null }))}
-            className="px-3 py-2 rounded-xl text-sm text-slate-800 dark:text-slate-100 bg-white ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-bud-teal/40 min-w-0 flex-1 sm:flex-none sm:w-[148px]"
+            className="px-3 py-1.5 rounded-xl text-sm text-slate-800 dark:text-slate-100 bg-white ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-bud-teal/40 min-w-0 flex-1 sm:flex-none sm:w-[148px]"
           />
         </div>
 
