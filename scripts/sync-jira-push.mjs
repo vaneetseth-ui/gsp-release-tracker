@@ -3,6 +3,7 @@ import { syncFromJira } from '../server/sync_jira.js';
 
 const APP_URL = (process.env.HEROKU_URL || process.env.APP_URL || '').trim();
 const INGEST_TOKEN = (process.env.INGEST_TOKEN || '').trim();
+const INCLUDE_UNMANAGED_JIRA = /^(1|true|yes|on)$/i.test(String(process.env.INCLUDE_UNMANAGED_JIRA || '').trim());
 
 if (!APP_URL) {
   throw new Error('Set HEROKU_URL or APP_URL to the deployed app base URL');
@@ -16,7 +17,10 @@ const res = await fetch(new URL('/api/sync/jira', APP_URL), {
     'Content-Type': 'application/json',
     ...(INGEST_TOKEN ? { Authorization: `Bearer ${INGEST_TOKEN}` } : {}),
   },
-  body: JSON.stringify(bundle),
+  body: JSON.stringify({
+    ...bundle,
+    includeUnmanaged: INCLUDE_UNMANAGED_JIRA,
+  }),
 });
 
 const text = await res.text();

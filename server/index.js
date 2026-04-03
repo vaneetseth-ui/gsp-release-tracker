@@ -37,6 +37,17 @@ const app        = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+function boolish(value, defaultValue = false) {
+  if (value == null) return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return defaultValue;
+  if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
+  if (['0', 'false', 'no', 'off'].includes(raw)) return false;
+  return defaultValue;
+}
+
 // ── Serve React build in production ──────────────────────────────────────────
 const DIST = join(__dirname, '..', 'dist');
 app.use(express.static(DIST));
@@ -122,6 +133,7 @@ app.post('/api/sync/monday', async (req, res) => {
 app.post('/api/sync/jira', async (req, res) => {
   if (!requireIngestAuth(req, res)) return;
   try {
+    const includeUnmanaged = boolish(req.body?.includeUnmanaged ?? req.query?.includeUnmanaged, false);
     let bundle;
     if (Array.isArray(req.body?.releases) && req.body.releases.length > 0) {
       bundle = {
@@ -131,9 +143,11 @@ app.post('/api/sync/jira', async (req, res) => {
         projects: req.body.projects || ['GSP'],
         jql: req.body.jql || ['project = GSP AND resolution = Unresolved ORDER BY priority DESC, updated DESC'],
         pushed: true,
+        includeUnmanaged,
       };
     } else {
       bundle = await syncFromJira();
+      bundle.includeUnmanaged = includeUnmanaged;
     }
 
     const result = await db.mergeJiraReleases(bundle.releases, {
@@ -142,6 +156,7 @@ app.post('/api/sync/jira', async (req, res) => {
       projects: bundle.projects,
       jql: bundle.jql,
       pushed: !!bundle.pushed,
+      includeUnmanaged,
     });
 
     res.json({
@@ -149,9 +164,11 @@ app.post('/api/sync/jira', async (req, res) => {
       totalIssues: bundle.totalIssues,
       linked: result.linked,
       unmanaged: result.unmanaged,
+      skippedUnmanaged: result.skippedUnmanaged,
       total: result.total,
       lastSync: result.lastSync,
       pushed: !!bundle.pushed,
+      includeUnmanaged,
     });
   } catch (e) {
     const message = e?.message || String(e);

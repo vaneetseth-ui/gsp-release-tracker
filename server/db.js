@@ -309,7 +309,19 @@ function jiraOnlyRow(r) {
   return flag(r?.is_unmanaged_jira) || src === 'jira' || releaseKey.startsWith('jira-only:');
 }
 
-export function mergeJiraIntoExisting(existingReleases, jiraRows) {
+function parseOptionFlag(v, defaultValue = false) {
+  if (v == null) return defaultValue;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  const raw = String(v).trim().toLowerCase();
+  if (!raw) return defaultValue;
+  if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
+  if (['0', 'false', 'no', 'off'].includes(raw)) return false;
+  return defaultValue;
+}
+
+export function mergeJiraIntoExisting(existingReleases, jiraRows, options = {}) {
+  const includeUnmanaged = parseOptionFlag(options.includeUnmanaged, false);
   const baseReleases = (existingReleases || []).filter((r) => !jiraOnlyRow(r));
   const releases = baseReleases.map((r) => normalizeRelease(r));
   const byJiraKey = new Map();
@@ -320,6 +332,7 @@ export function mergeJiraIntoExisting(existingReleases, jiraRows) {
 
   let linked = 0;
   let unmanaged = 0;
+  let skippedUnmanaged = 0;
   let updated = 0;
 
   for (const raw of jiraRows || []) {
@@ -352,6 +365,11 @@ export function mergeJiraIntoExisting(existingReleases, jiraRows) {
       continue;
     }
 
+    if (!includeUnmanaged) {
+      skippedUnmanaged++;
+      continue;
+    }
+
     releases.push(jiraRelease);
     byJiraKey.set(key, jiraRelease);
     unmanaged++;
@@ -362,16 +380,20 @@ export function mergeJiraIntoExisting(existingReleases, jiraRows) {
     releases: releases.map((r) => normalizeRelease(r)),
     linked,
     unmanaged,
+    skippedUnmanaged,
     updated,
   };
 }
 
 export async function mergeJiraReleases(jiraRows, meta = null) {
   if (!jiraRows?.length) {
-    return { linked: 0, unmanaged: 0, updated: 0, total: R().length };
+    return { linked: 0, unmanaged: 0, skippedUnmanaged: 0, updated: 0, total: R().length };
   }
 
-  const { releases, linked, unmanaged, updated } = mergeJiraIntoExisting(R(), jiraRows);
+  const includeUnmanaged = parseOptionFlag(meta?.includeUnmanaged, false);
+  const { releases, linked, unmanaged, skippedUnmanaged, updated } = mergeJiraIntoExisting(R(), jiraRows, {
+    includeUnmanaged,
+  });
   store.releases = releases;
   const lastSync = meta?.fetchedAt || new Date().toISOString();
   store.lastSync = lastSync;
@@ -395,7 +417,7 @@ export async function mergeJiraReleases(jiraRows, meta = null) {
     throw e;
   }
 
-  return { linked, unmanaged, updated, total: store.releases.length, lastSync };
+  return { linked, unmanaged, skippedUnmanaged, updated, total: store.releases.length, lastSync };
 }
 
 function normalizeChangelog(c) {
