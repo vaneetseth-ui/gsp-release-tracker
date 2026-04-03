@@ -129,6 +129,48 @@ function Tier1Result({ result }) {
               </a>
             </div>
           )}
+          {r.tracker_project_title && (
+            <div className="col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Tracker Project</p>
+              <p className="text-sm text-slate-700">{r.tracker_project_title}</p>
+            </div>
+          )}
+          {(r.product_readiness_status || r.product_readiness_dri || r.product_readiness_start_date || r.product_readiness_end_date) && (
+            <div className="col-span-2 rounded-xl bg-slate-50 px-3 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Product Readiness</p>
+                {r.product_readiness_status ? <StatusBadge status={r.product_readiness_status} className="text-[10px] normal-case tracking-normal" /> : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-600">
+                {r.product_readiness_dri ? <span>DRI: {r.product_readiness_dri}</span> : null}
+                {(r.product_readiness_start_date || r.product_readiness_end_date) ? (
+                  <span className="font-mono">
+                    {r.product_readiness_start_date || r.product_readiness_end_date}
+                    {r.product_readiness_end_date && r.product_readiness_start_date ? ` - ${r.product_readiness_end_date}` : ''}
+                  </span>
+                ) : null}
+              </div>
+              {r.product_readiness_comment ? <p className="mt-2 text-sm text-slate-700">{r.product_readiness_comment}</p> : null}
+            </div>
+          )}
+          {(r.gsp_launch_status || r.gsp_launch_dri || r.gsp_launch_start_date || r.gsp_launch_end_date) && (
+            <div className="col-span-2 rounded-xl bg-slate-50 px-3 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">GSP Launch</p>
+                {r.gsp_launch_status ? <StatusBadge status={r.gsp_launch_status} className="text-[10px] normal-case tracking-normal" /> : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-600">
+                {r.gsp_launch_dri ? <span>DRI: {r.gsp_launch_dri}</span> : null}
+                {(r.gsp_launch_start_date || r.gsp_launch_end_date) ? (
+                  <span className="font-mono">
+                    {r.gsp_launch_start_date || r.gsp_launch_end_date}
+                    {r.gsp_launch_end_date && r.gsp_launch_start_date ? ` - ${r.gsp_launch_end_date}` : ''}
+                  </span>
+                ) : null}
+              </div>
+              {r.gsp_launch_comment ? <p className="mt-2 text-sm text-slate-700">{r.gsp_launch_comment}</p> : null}
+            </div>
+          )}
           {(jiraLinks.length > 0 || mondayUrl || showRawJira) && (
             <div className="col-span-2">
               <p className="text-xs text-slate-400 mb-0.5">Jira / Monday</p>

@@ -35,6 +35,16 @@ function isCommentStale(commentUpdatedAt) {
   return Date.now() - t > 7 * MS_PER_DAY;
 }
 
+function parseTrackerDetails(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * API rows are snake_case; UI expects camelCase for flags + jira alias.
  */
@@ -50,6 +60,7 @@ export function normalizeReleaseRow(r) {
   const isUnmanagedJira = flag(r.is_unmanaged_jira);
   const legacySourced = flag(r.legacy_sourced);
   const priorityNumber = r.priority_number != null ? Number(r.priority_number) : null;
+  const trackerDetails = parseTrackerDetails(r.tracker_details_json);
 
   return {
     ...r,
@@ -75,6 +86,19 @@ export function normalizeReleaseRow(r) {
     gsp_launch_date: r.gsp_launch_date ?? null,
     schedule_url: r.schedule_url ?? null,
     tracker_group: r.tracker_group ?? null,
+    tracker_project_title: r.tracker_project_title ?? null,
+    product_readiness_dri: r.product_readiness_dri ?? null,
+    product_readiness_status: r.product_readiness_status ?? null,
+    product_readiness_start_date: r.product_readiness_start_date ?? null,
+    product_readiness_end_date: r.product_readiness_end_date ?? null,
+    product_readiness_comment: r.product_readiness_comment ?? null,
+    gsp_launch_dri: r.gsp_launch_dri ?? null,
+    gsp_launch_status: r.gsp_launch_status ?? null,
+    gsp_launch_start_date: r.gsp_launch_start_date ?? null,
+    gsp_launch_end_date: r.gsp_launch_end_date ?? null,
+    gsp_launch_comment: r.gsp_launch_comment ?? null,
+    tracker_details_json: r.tracker_details_json ?? null,
+    trackerDetails,
     monday_comment: r.monday_comment ?? null,
     comment_updated_at: r.comment_updated_at ?? null,
     commentStale: isCommentStale(r.comment_updated_at),

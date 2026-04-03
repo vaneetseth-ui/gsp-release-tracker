@@ -22,6 +22,69 @@ function ContactBadge({ icon: Icon, label, value }) {
   );
 }
 
+function formatTimelineRange(start, end) {
+  if (!start && !end) return 'No timeline';
+  if (start && end) return `${start} - ${end}`;
+  return start || end;
+}
+
+function MilestoneDetailCard({ title, milestone }) {
+  if (!milestone) return null;
+  const hasBody =
+    milestone.dri ||
+    milestone.status ||
+    milestone.timeline_start ||
+    milestone.timeline_end ||
+    milestone.comment ||
+    (milestone.line_items || []).length;
+  if (!hasBody) return null;
+  return (
+    <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-200/80">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</p>
+        {milestone.status ? <StatusBadge status={milestone.status} className="text-[10px] normal-case tracking-normal" /> : null}
+      </div>
+      <div className="mt-2 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Timeline</p>
+          <p className="mt-1 font-mono text-xs text-slate-900">{formatTimelineRange(milestone.timeline_start, milestone.timeline_end)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">DRI</p>
+          <p className="mt-1 text-xs text-slate-900">{milestone.dri || 'Unassigned'}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Dependencies</p>
+          <p className="mt-1 text-xs text-slate-900">
+            {(milestone.dependency || []).length ? milestone.dependency.join(', ') : 'None listed'}
+          </p>
+        </div>
+      </div>
+      {milestone.comment ? (
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">{milestone.comment}</p>
+      ) : null}
+      {(milestone.line_items || []).length > 0 ? (
+        <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+          {(milestone.line_items || []).slice(0, 8).map((item, index) => (
+            <div key={`${title}-${index}-${item.item}`} className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200/70">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-slate-900">{item.item}</p>
+                {item.raw_status ? <StatusBadge status={item.raw_status} className="text-[10px] normal-case tracking-normal" /> : null}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
+                {item.dri ? <span>DRI: {item.dri}</span> : null}
+                {item.derived_end ? <span className="font-mono">{item.derived_start ? `${item.derived_start} - ${item.derived_end}` : item.derived_end}</span> : null}
+                {(item.jira_links || []).length ? <span className="font-mono">{item.jira_links.join(', ')}</span> : null}
+              </div>
+              {item.comment ? <p className="mt-1 text-xs leading-relaxed text-slate-600">{item.comment}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ReleaseCard({ release, computeGapsForRelease }) {
   const isNA = release.stage === 'N/A';
   if (isNA) return null;
@@ -32,6 +95,28 @@ function ReleaseCard({ release, computeGapsForRelease }) {
   const title = mondayCardTitle(release);
   const description = mondayDescription(release);
   const pmo = release.pmo_status || release.stage;
+  const trackerDetails = release.trackerDetails || null;
+  const trackerMilestones = trackerDetails?.milestones || {};
+  const productReadinessMilestone =
+    trackerMilestones.product_readiness || {
+      dri: release.product_readiness_dri,
+      status: release.product_readiness_status,
+      timeline_start: release.product_readiness_start_date,
+      timeline_end: release.product_readiness_end_date,
+      comment: release.product_readiness_comment,
+      line_items: [],
+      dependency: [],
+    };
+  const gspLaunchMilestone =
+    trackerMilestones.gsp_launch || {
+      dri: release.gsp_launch_dri,
+      status: release.gsp_launch_status,
+      timeline_start: release.gsp_launch_start_date,
+      timeline_end: release.gsp_launch_end_date,
+      comment: release.gsp_launch_comment,
+      line_items: [],
+      dependency: [],
+    };
   const gaps = computeGapsForRelease(release).filter((g) => g.severity === 'Critical' || g.severity === 'High');
   const hasScheduleLink = release.schedule_url && /^https?:\/\//i.test(release.schedule_url);
 
@@ -40,6 +125,9 @@ function ReleaseCard({ release, computeGapsForRelease }) {
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 min-w-0">
           <h3 className="font-bold text-base text-slate-900 dark:text-white leading-snug">{title}</h3>
+          {release.tracker_project_title ? (
+            <p className="text-sm text-slate-500 leading-relaxed">{release.tracker_project_title}</p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-1.5">
             <ProductAreaBadge area={release.productArea || release.product_area} />
             {release.market_type ? (
@@ -125,6 +213,11 @@ function ReleaseCard({ release, computeGapsForRelease }) {
       <div className="grid grid-cols-2 gap-1">
         <ContactBadge icon={Briefcase} label="PM" value={release.pm} />
         <ContactBadge icon={User} label="SE Lead" value={release.se_lead} />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <MilestoneDetailCard title="Product Readiness" milestone={productReadinessMilestone} />
+        <MilestoneDetailCard title="GSP Launch" milestone={gspLaunchMilestone} />
       </div>
 
       {(hasToolLinks || showRawJira) && (

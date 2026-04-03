@@ -30,6 +30,25 @@ function scheduleSortValue(release) {
   return scheduleDate(release) || '9999-12-31';
 }
 
+function formatTimelineRange(start, end) {
+  if (!start && !end) return 'No timeline';
+  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`;
+  return formatDate(end || start);
+}
+
+function MilestonePill({ label, date, status, dri }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200/70">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+        {status ? <StatusBadge status={status} className="text-[10px] normal-case tracking-normal" /> : null}
+      </div>
+      <p className="mt-1 font-mono text-xs font-semibold text-slate-900">{formatDate(date)}</p>
+      {dri ? <p className="mt-1 text-xs text-slate-500">{dri}</p> : null}
+    </div>
+  );
+}
+
 function matchesView(viewId, release, computeGapsForRelease) {
   const gaps = computeGapsForRelease(release);
   if (viewId === 'scheduled') return !!scheduleDate(release);
@@ -54,6 +73,9 @@ function MobileCard({ release, onSelectPartner }) {
             {release.partner}
           </button>
           <p className="mt-1 text-sm font-medium text-slate-700">{release.product}</p>
+          {release.tracker_project_title ? (
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">{release.tracker_project_title}</p>
+          ) : null}
         </div>
         <StatusBadge status={release.pmo_status || release.stage} />
       </div>
@@ -69,14 +91,18 @@ function MobileCard({ release, onSelectPartner }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Launch</p>
-          <p className="mt-1 font-mono text-sm font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Readiness</p>
-          <p className="mt-1 font-mono text-sm font-medium text-slate-900">{formatDate(release.product_readiness_date)}</p>
-        </div>
+        <MilestonePill
+          label="Launch"
+          date={release.gsp_launch_date}
+          status={release.gsp_launch_status}
+          dri={release.gsp_launch_dri}
+        />
+        <MilestonePill
+          label="Readiness"
+          date={release.product_readiness_date}
+          status={release.product_readiness_status}
+          dri={release.product_readiness_dri}
+        />
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">PM</p>
           <p className="mt-1 font-medium text-slate-900">{release.pm || 'Unassigned'}</p>
@@ -153,6 +179,11 @@ export default function PortfolioView({ onSelectPartner }) {
           release.jira_number,
           release.monday_comment,
           release.pmo_status,
+          release.tracker_project_title,
+          release.product_readiness_status,
+          release.gsp_launch_status,
+          release.product_readiness_dri,
+          release.gsp_launch_dri,
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
@@ -266,6 +297,9 @@ export default function PortfolioView({ onSelectPartner }) {
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-medium text-slate-900">{release.product}</p>
+                          {release.tracker_project_title ? (
+                            <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">{release.tracker_project_title}</p>
+                          ) : null}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <ProductAreaBadge area={release.productArea || release.product_area} />
                           </div>
@@ -286,8 +320,28 @@ export default function PortfolioView({ onSelectPartner }) {
                             <p className="mt-2 text-xs font-semibold text-violet-700">Stale note</p>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 font-mono font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</td>
-                        <td className="px-4 py-3 font-mono font-medium text-slate-900">{formatDate(release.product_readiness_date)}</td>
+                        <td className="px-4 py-3">
+                          <p className="font-mono font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</p>
+                          {release.gsp_launch_status ? (
+                            <div className="mt-2">
+                              <StatusBadge status={release.gsp_launch_status} className="text-[10px] normal-case tracking-normal" />
+                            </div>
+                          ) : null}
+                          {release.gsp_launch_dri ? (
+                            <p className="mt-2 text-xs text-slate-500">{release.gsp_launch_dri}</p>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-mono font-medium text-slate-900">{formatDate(release.product_readiness_date)}</p>
+                          {release.product_readiness_status ? (
+                            <div className="mt-2">
+                              <StatusBadge status={release.product_readiness_status} className="text-[10px] normal-case tracking-normal" />
+                            </div>
+                          ) : null}
+                          {release.product_readiness_dri ? (
+                            <p className="mt-2 text-xs text-slate-500">{release.product_readiness_dri}</p>
+                          ) : null}
+                        </td>
                         <td className="px-4 py-3">
                           <p className="font-medium text-slate-900">{release.pm || 'Unassigned PM'}</p>
                           <p className="mt-1 text-xs text-slate-500">{release.se_lead || 'Unassigned SE lead'}</p>
@@ -314,6 +368,12 @@ export default function PortfolioView({ onSelectPartner }) {
                           {release.project_title ? (
                             <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500">
                               {release.project_title}
+                            </p>
+                          ) : null}
+                          {(release.product_readiness_start_date || release.gsp_launch_start_date) ? (
+                            <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500">
+                              PR: {formatTimelineRange(release.product_readiness_start_date, release.product_readiness_end_date)}{' '}
+                              · Launch: {formatTimelineRange(release.gsp_launch_start_date, release.gsp_launch_end_date)}
                             </p>
                           ) : null}
                         </td>

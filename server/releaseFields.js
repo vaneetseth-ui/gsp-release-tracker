@@ -21,6 +21,18 @@
  * @property {string|null} gsp_launch_date Tracker milestone 2
  * @property {string|null} schedule_url Monday link to tracker row
  * @property {string|null} tracker_group Matched tracker group name
+ * @property {string|null} tracker_project_title Tracker project title from Monday group
+ * @property {string|null} product_readiness_dri
+ * @property {string|null} product_readiness_status
+ * @property {string|null} product_readiness_start_date
+ * @property {string|null} product_readiness_end_date
+ * @property {string|null} product_readiness_comment
+ * @property {string|null} gsp_launch_dri
+ * @property {string|null} gsp_launch_status
+ * @property {string|null} gsp_launch_start_date
+ * @property {string|null} gsp_launch_end_date
+ * @property {string|null} gsp_launch_comment
+ * @property {string|null} tracker_details_json JSON payload with milestone hierarchy and drill-down items
  * @property {string|null} monday_comment Monday Comment column
  * @property {string|null} comment_updated_at ISO — stale if > 7d
  * @property {string|null} target_date Legacy single target (back compat)
@@ -61,6 +73,18 @@ export const RELEASE_EXTRA_COLUMNS = [
   'gsp_launch_date',
   'schedule_url',
   'tracker_group',
+  'tracker_project_title',
+  'product_readiness_dri',
+  'product_readiness_status',
+  'product_readiness_start_date',
+  'product_readiness_end_date',
+  'product_readiness_comment',
+  'gsp_launch_dri',
+  'gsp_launch_status',
+  'gsp_launch_start_date',
+  'gsp_launch_end_date',
+  'gsp_launch_comment',
+  'tracker_details_json',
   'monday_comment',
   'comment_updated_at',
   'data_provenance',
@@ -87,6 +111,18 @@ export const MONDAY_CANONICAL_FIELDS = new Set([
   'gsp_launch_date',
   'schedule_url',
   'tracker_group',
+  'tracker_project_title',
+  'product_readiness_dri',
+  'product_readiness_status',
+  'product_readiness_start_date',
+  'product_readiness_end_date',
+  'product_readiness_comment',
+  'gsp_launch_dri',
+  'gsp_launch_status',
+  'gsp_launch_start_date',
+  'gsp_launch_end_date',
+  'gsp_launch_comment',
+  'tracker_details_json',
   'monday_comment',
   'comment_updated_at',
   'monday_url',
