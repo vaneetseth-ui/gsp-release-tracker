@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { ExternalLink, Search } from 'lucide-react';
 import { useData } from '../context/DataContext.jsx';
-import { STAGES } from '../data/stages.js';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
+import StatusBadge from './StatusBadge.jsx';
+import { cn } from '../lib/utils.js';
+import { mondayDescriptionPreview } from '../utils/releaseDisplay.js';
 
 const VIEWS = [
   { id: 'all', label: 'All active' },
@@ -53,9 +55,7 @@ function MobileCard({ release, onSelectPartner }) {
           </button>
           <p className="mt-1 text-sm font-medium text-slate-700">{release.product}</p>
         </div>
-        <span className={`rounded-full px-2 py-1 text-xs font-bold ${STAGES[release.stage]?.badge || STAGES.Planned.badge}`}>
-          {release.pmo_status || release.stage}
-        </span>
+        <StatusBadge status={release.pmo_status || release.stage} />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -71,11 +71,11 @@ function MobileCard({ release, onSelectPartner }) {
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Launch</p>
-          <p className="mt-1 font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</p>
+          <p className="mt-1 font-mono text-sm font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Readiness</p>
-          <p className="mt-1 font-medium text-slate-900">{formatDate(release.product_readiness_date)}</p>
+          <p className="mt-1 font-mono text-sm font-medium text-slate-900">{formatDate(release.product_readiness_date)}</p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">PM</p>
@@ -89,7 +89,21 @@ function MobileCard({ release, onSelectPartner }) {
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <JiraMondayLinks jiraLinks={release.jiraLinks || []} mondayUrl={release.mondayUrl} compact />
+        {release.schedule_url && /^https?:\/\//i.test(release.schedule_url) ? (
+          <a
+            href={release.schedule_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-bud-teal hover:underline"
+          >
+            Schedule
+            <ExternalLink size={11} strokeWidth={2} />
+          </a>
+        ) : null}
       </div>
+      {mondayDescriptionPreview(release, 120) ? (
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">{mondayDescriptionPreview(release, 120)}</p>
+      ) : null}
     </div>
   );
 }
@@ -126,6 +140,7 @@ export default function PortfolioView({ onSelectPartner }) {
           release.market_type,
           release.product_track,
           release.jira_number,
+          release.monday_comment,
           release.pmo_status,
         ]
           .filter(Boolean)
@@ -144,7 +159,7 @@ export default function PortfolioView({ onSelectPartner }) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-bud-teal">Portfolio View</p>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-display font-bold tracking-tight text-slate-950">Release Portfolio</h2>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+          <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-sm font-semibold text-slate-700">
             {filtered.length} shown
           </span>
         </div>
@@ -173,14 +188,15 @@ export default function PortfolioView({ onSelectPartner }) {
                   key={view.id}
                   type="button"
                   onClick={() => setActiveView(view.id)}
-                  className={`rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+                  className={cn(
+                    'rounded-full px-3 py-2 text-sm font-semibold transition-all',
                     active
                       ? 'bg-bud-navy text-white shadow-sm'
                       : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
-                  }`}
+                  )}
                 >
                   {view.label}
-                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                  <span className={cn('ml-2 rounded-full px-2 py-0.5 font-mono text-[11px] font-bold', active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700')}>
                     {counts[view.id] || 0}
                   </span>
                 </button>
@@ -242,17 +258,20 @@ export default function PortfolioView({ onSelectPartner }) {
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <ProductAreaBadge area={release.productArea || release.product_area} />
                           </div>
+                          {mondayDescriptionPreview(release, 90) ? (
+                            <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500">
+                              {mondayDescriptionPreview(release, 90)}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`rounded-full px-2 py-1 text-xs font-bold ${STAGES[release.stage]?.badge || STAGES.Planned.badge}`}>
-                            {release.pmo_status || release.stage}
-                          </span>
+                          <StatusBadge status={release.pmo_status || release.stage} />
                           {release.commentStale ? (
                             <p className="mt-2 text-xs font-semibold text-violet-700">Stale note</p>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</td>
-                        <td className="px-4 py-3 font-medium text-slate-900">{formatDate(release.product_readiness_date)}</td>
+                        <td className="px-4 py-3 font-mono font-medium text-slate-900">{formatDate(release.gsp_launch_date)}</td>
+                        <td className="px-4 py-3 font-mono font-medium text-slate-900">{formatDate(release.product_readiness_date)}</td>
                         <td className="px-4 py-3">
                           <p className="font-medium text-slate-900">{release.pm || 'Unassigned PM'}</p>
                           <p className="mt-1 text-xs text-slate-500">{release.se_lead || 'Unassigned SE lead'}</p>
@@ -262,6 +281,17 @@ export default function PortfolioView({ onSelectPartner }) {
                         </td>
                         <td className="px-4 py-3">
                           <JiraMondayLinks jiraLinks={release.jiraLinks || []} mondayUrl={release.mondayUrl} compact />
+                          {release.schedule_url && /^https?:\/\//i.test(release.schedule_url) ? (
+                            <a
+                              href={release.schedule_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-bud-teal hover:underline"
+                            >
+                              Schedule
+                              <ExternalLink size={11} strokeWidth={2} />
+                            </a>
+                          ) : null}
                         </td>
                       </tr>
                     ))}

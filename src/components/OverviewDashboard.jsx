@@ -11,7 +11,8 @@ import {
   Users,
 } from 'lucide-react';
 import { useData } from '../context/DataContext.jsx';
-import { STAGES } from '../data/stages.js';
+import StatusBadge from './StatusBadge.jsx';
+import { cn } from '../lib/utils.js';
 
 function formatDate(value) {
   if (!value) return 'Not scheduled';
@@ -40,21 +41,33 @@ function severityRank(gap) {
 
 function MetricCard({ icon: Icon, label, value, detail, tone = 'default' }) {
   const toneMap = {
-    primary: 'border-cyan-200 bg-cyan-50',
-    success: 'border-emerald-200 bg-emerald-50',
-    warning: 'border-amber-200 bg-amber-50',
-    accent: 'border-violet-200 bg-violet-50',
-    default: 'border-slate-200 bg-white',
+    primary: 'bg-cyan-50 border-cyan-100',
+    success: 'bg-emerald-50 border-emerald-100',
+    warning: 'bg-amber-50 border-amber-100',
+    accent: 'bg-violet-50 border-violet-100',
+    default: 'bg-white border-slate-200',
+  };
+  const iconTone = {
+    primary: 'bg-cyan-500',
+    success: 'bg-emerald-500',
+    warning: 'bg-amber-500',
+    accent: 'bg-violet-500',
+    default: 'bg-slate-900',
   };
 
   return (
-    <div className={`rounded-[24px] border p-4 shadow-sm ${toneMap[tone] || toneMap.default}`}>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-        <Icon size={15} strokeWidth={2.2} className="text-bud-teal" />
-        {label}
+    <div className={cn('rounded-[24px] border bg-white p-6 shadow-sm', toneMap[tone] || toneMap.default)}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-sm', iconTone[tone] || iconTone.default)}>
+          <Icon size={20} strokeWidth={2.1} />
+        </div>
+        <span className="rounded-lg bg-white/70 px-2 py-1 font-mono text-xs font-medium text-slate-500 ring-1 ring-slate-200/80">
+          live
+        </span>
       </div>
-      <div className="mt-3 text-3xl font-display font-bold tracking-tight text-slate-950">{value}</div>
-      <p className="mt-1 text-sm text-slate-600">{detail}</p>
+      <h3 className="text-sm font-medium text-slate-500">{label}</h3>
+      <p className="mt-1 font-mono text-3xl font-semibold text-slate-900">{value}</p>
+      <p className="mt-2 text-sm text-slate-600">{detail}</p>
     </div>
   );
 }
@@ -89,22 +102,10 @@ function AttentionItem({ item, onSelectPartner }) {
           </p>
           <p className="mt-1 text-sm text-slate-600">{item.reason}</p>
         </div>
-        <span
-          className={`rounded-full px-2 py-1 text-[11px] font-bold uppercase ${
-            item.rank >= 3
-              ? 'bg-red-100 text-red-800'
-              : item.rank >= 2
-                ? 'bg-amber-100 text-amber-900'
-                : 'bg-slate-100 text-slate-700'
-          }`}
-        >
-          {item.rank >= 3 ? 'Critical' : item.rank >= 2 ? 'High' : 'Watch'}
-        </span>
+        <StatusBadge status={item.rank >= 3 ? 'Critical' : item.rank >= 2 ? 'High' : 'Low'} />
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        <span className={`rounded-full px-2 py-1 font-semibold ${STAGES[item.release.stage]?.badge || STAGES.Planned.badge}`}>
-          {item.release.pmo_status || item.release.stage}
-        </span>
+        <StatusBadge status={item.release.pmo_status || item.release.stage} className="text-[10px]" />
         <span>{item.release.pm || 'No PM'}</span>
         <span>{item.release.se_lead || 'No SE lead'}</span>
       </div>

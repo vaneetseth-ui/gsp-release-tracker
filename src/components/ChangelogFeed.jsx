@@ -3,7 +3,7 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, ArrowRight, Search, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
-import { STAGES } from '../data/stages.js';
+import StatusBadge from './StatusBadge.jsx';
 
 const STAGE_ORDER = {
   GA: 1,
@@ -48,12 +48,7 @@ function ChangeDirection({ from, to }) {
 
 function StageBadge({ stage }) {
   const key = stage === 'Blocked' ? 'OnHold' : stage;
-  const s = STAGES[key] || STAGES['N/A'];
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${s.badge}`}>
-      {s.label}
-    </span>
-  );
+  return <StatusBadge status={key === 'OnHold' ? 'On hold' : key} />;
 }
 
 function ChangeItem({ item, onSelectPartner }) {
@@ -87,7 +82,7 @@ function ChangeItem({ item, onSelectPartner }) {
         </div>
         <span className="sm:ml-auto text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
           <Clock size={13} strokeWidth={2} />
-          {item.date}
+          <span className="font-mono">{item.date}</span>
         </span>
       </div>
 

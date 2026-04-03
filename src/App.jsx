@@ -28,6 +28,7 @@ import TimelineFilter  from './components/TimelineFilter.jsx';
 import OverviewDashboard from './components/OverviewDashboard.jsx';
 import PortfolioView from './components/PortfolioView.jsx';
 import BuddAiMark from './components/BuddAiMark.jsx';
+import { cn } from './lib/utils.js';
 import { useData } from './context/DataContext.jsx';
 import { useTheme } from './context/ThemeContext.jsx';
 
@@ -41,23 +42,26 @@ const TABS = [
 ];
 
 function StatPill({ icon: Icon, label, value, tone = 'default' }) {
-  const toneClass =
-    {
-      primary: 'border-cyan-200/60 bg-cyan-50/90',
-      accent: 'border-violet-200/60 bg-violet-50/90',
-      success: 'border-emerald-200/60 bg-emerald-50/90',
-      warning: 'border-orange-200/60 bg-orange-50/90',
-      default: 'border-slate-200/80 bg-white/95',
-    }[tone] || 'border-slate-200/80 bg-white/95';
+  const toneClass = {
+    primary: 'border-cyan-100 bg-cyan-50',
+    accent: 'border-violet-100 bg-violet-50',
+    success: 'border-emerald-100 bg-emerald-50',
+    warning: 'border-orange-100 bg-orange-50',
+    default: 'border-slate-100 bg-white',
+  }[tone] || 'border-slate-100 bg-white';
 
   return (
-    <div className={`rounded-xl border px-3 py-2.5 shadow-sm ${toneClass}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-          <Icon size={13} strokeWidth={2} className="text-bud-teal" />
-          {label}
+    <div className={cn('rounded-2xl border px-3.5 py-3 shadow-sm', toneClass)}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl', tone === 'warning' ? 'bg-orange-500' : tone === 'accent' ? 'bg-violet-500' : tone === 'success' ? 'bg-emerald-500' : 'bg-cyan-500')}>
+              <Icon size={14} strokeWidth={2.1} className="text-white" />
+            </span>
+            {label}
+          </div>
         </div>
-        <div className="text-xl font-display font-bold leading-none tracking-tight text-slate-950">{value}</div>
+        <div className="font-mono text-2xl font-semibold leading-none tracking-tight text-slate-950">{value}</div>
       </div>
     </div>
   );

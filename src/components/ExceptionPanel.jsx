@@ -3,10 +3,10 @@
  */
 import React, { useMemo, useState } from 'react';
 import { AlertCircle, ClipboardList, Filter } from 'lucide-react';
-import { STAGES } from '../data/stages.js';
 import { useData } from '../context/DataContext.jsx';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
+import StatusBadge from './StatusBadge.jsx';
 
 const SEV_STYLE = {
   Critical: 'border-l-red-500 bg-red-50/30 dark:bg-red-950/20',
@@ -43,15 +43,9 @@ function GapCard({ entry, onSelectPartner }) {
           <div className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 flex flex-wrap items-center gap-1.5">
             <span className="font-semibold text-slate-800 dark:text-slate-200">{release.product}</span>
             <ProductAreaBadge area={release.productArea || release.product_area} />
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold ${STAGES[release.stage]?.badge || STAGES.Planned.badge}`}
-            >
-              {release.pmo_status || release.stage}
-            </span>
+            <StatusBadge status={release.pmo_status || release.stage} />
             {release.isUnmanagedJira && (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                Unmanaged Jira
-              </span>
+              <StatusBadge status="Warning" className="text-[10px]">Unmanaged Jira</StatusBadge>
             )}
           </div>
         </div>
@@ -62,17 +56,7 @@ function GapCard({ entry, onSelectPartner }) {
       <ul className="space-y-1.5 text-sm">
         {gaps.map((g) => (
           <li key={g.field} className="flex gap-2 items-start">
-            <span
-              className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                g.severity === 'Critical'
-                  ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
-                  : g.severity === 'High'
-                    ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-              }`}
-            >
-              {g.severity}
-            </span>
+            <StatusBadge status={g.severity} className="shrink-0" />
             <span className="text-slate-700 dark:text-slate-200">
               <span className="font-semibold">{g.label}:</span> {g.message}
             </span>

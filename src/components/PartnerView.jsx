@@ -2,14 +2,14 @@
  * PartnerView — v1.4 Monday-native cards (Jira enrichment stored but not shown as title/body)
  */
 import React from 'react';
-import { X, User, Briefcase, Calendar, CheckCircle2 } from 'lucide-react';
-import { STAGES } from '../data/stages.js';
+import { X, User, Briefcase, Calendar, CheckCircle2, ExternalLink, Link2 } from 'lucide-react';
 import { OTHER_MATRIX_BUCKET } from '../data/matrixPartners.js';
 import { useData } from '../context/DataContext.jsx';
 import { mondayCardTitle, mondayDescription } from '../utils/releaseDisplay.js';
 import ProductAreaBadge from './ProductAreaBadge.jsx';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 import GlipNotifyButton from './GlipNotifyButton.jsx';
+import StatusBadge from './StatusBadge.jsx';
 
 function ContactBadge({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -32,8 +32,8 @@ function ReleaseCard({ release, computeGapsForRelease }) {
   const title = mondayCardTitle(release);
   const description = mondayDescription(release);
   const pmo = release.pmo_status || release.stage;
-  const stageStyle = STAGES[release.stage] || STAGES.Planned;
   const gaps = computeGapsForRelease(release).filter((g) => g.severity === 'Critical' || g.severity === 'High');
+  const hasScheduleLink = release.schedule_url && /^https?:\/\//i.test(release.schedule_url);
 
   return (
     <div className="rounded-[24px] p-4 space-y-3 transition-all ring-1 ring-slate-200 bg-white shadow-soft">
@@ -42,6 +42,12 @@ function ReleaseCard({ release, computeGapsForRelease }) {
           <h3 className="font-bold text-base text-slate-900 dark:text-white leading-snug">{title}</h3>
           <div className="flex flex-wrap items-center gap-1.5">
             <ProductAreaBadge area={release.productArea || release.product_area} />
+            {release.market_type ? (
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">{release.market_type}</span>
+            ) : null}
+            {release.product_track ? (
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">{release.product_track}</span>
+            ) : null}
             {release.legacy_sourced ? (
               <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-100">
                 Legacy source
@@ -54,11 +60,7 @@ function ReleaseCard({ release, computeGapsForRelease }) {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold ${stageStyle.badge}`}
-            >
-              {pmo}
-            </span>
+            <StatusBadge status={pmo} />
           </div>
         </div>
       </div>
@@ -84,7 +86,7 @@ function ReleaseCard({ release, computeGapsForRelease }) {
           <Calendar size={14} strokeWidth={2} />
           <span>
             Readiness:{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-100">
+            <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">
               {release.product_readiness_date || 'not scheduled'}
             </span>
           </span>
@@ -93,16 +95,28 @@ function ReleaseCard({ release, computeGapsForRelease }) {
           <Calendar size={14} strokeWidth={2} />
           <span>
             GSP launch:{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-100">
+            <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">
               {release.gsp_launch_date || 'not scheduled'}
             </span>
           </span>
         </div>
+        {hasScheduleLink && (
+          <a
+            href={release.schedule_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-slate-600 transition-colors hover:text-bud-teal"
+          >
+            <Link2 size={14} strokeWidth={2} />
+            <span className="font-semibold">Schedule</span>
+            <ExternalLink size={12} strokeWidth={2} />
+          </a>
+        )}
         {release.actual_date && (
           <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
             <CheckCircle2 size={14} strokeWidth={2} />
             <span>
-              Live: <span className="font-bold">{release.actual_date}</span>
+              Live: <span className="font-mono font-bold">{release.actual_date}</span>
             </span>
           </div>
         )}
@@ -186,12 +200,9 @@ export default function PartnerView({ partner, onClose }) {
 
       <div className="flex flex-wrap gap-2 px-5 py-3 flex-shrink-0 border-b border-slate-200 bg-white">
         {Object.entries(stageCounts).map(([stage, count]) => (
-          <span
-            key={stage}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm ${STAGES[stage]?.badge || 'bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200'}`}
-          >
-            {stage} <span className="tabular-nums font-bold">{count}</span>
-          </span>
+          <StatusBadge key={stage} status={stage} className="gap-2 text-xs normal-case tracking-normal">
+            <span className="font-mono font-bold">{count}</span>
+          </StatusBadge>
         ))}
       </div>
 

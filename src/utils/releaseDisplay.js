@@ -19,6 +19,13 @@ export function mondayDescription(release) {
   return '';
 }
 
+export function mondayDescriptionPreview(release, limit = 160) {
+  const description = mondayDescription(release);
+  if (!description) return '';
+  if (description.length <= limit) return description;
+  return `${description.slice(0, limit).trimEnd()}…`;
+}
+
 /** Matrix cell tooltip: Monday-first (no Jira summary) */
 export function matrixCellTooltip(release, extraLine) {
   if (!release) return '';

@@ -3,12 +3,13 @@
  * Calls POST /api/query → tier-routed result (Tier 1–4)
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertTriangle, User, Bot, RotateCcw, ExternalLink } from 'lucide-react';
 import { api } from '../api.js';
 import { buildJiraLinks, jiraTextForLinkParsing, resolveMondayUrl } from '../utils/toolLinks.js';
 import { mondayCardTitle, mondayDescription, glipSummaryLine } from '../utils/releaseDisplay.js';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
 import GlipNotifyButton from './GlipNotifyButton.jsx';
+import StatusBadge from './StatusBadge.jsx';
 
 const SUGGESTIONS = [
   "What is MCM's Nova IVA status?",
@@ -18,17 +19,6 @@ const SUGGESTIONS = [
   'Show launch dates for all projects by row',
   'Is Telus live on RCX?',
 ];
-
-const STAGE_COLORS = {
-  GA:      'bg-emerald-100 text-emerald-800',
-  Beta:    'bg-blue-100 text-blue-800',
-  EAP:     'bg-amber-100 text-amber-800',
-  Dev:     'bg-purple-100 text-purple-800',
-  Planned: 'bg-slate-100 text-slate-600',
-  OnHold: 'bg-orange-100 text-orange-900',
-  Blocked: 'bg-orange-100 text-orange-900',
-  'N/A':   'bg-slate-50 text-slate-400',
-};
 
 const SEV_COLORS = {
   Critical: 'bg-red-100 text-red-800 border-red-200',
@@ -62,9 +52,7 @@ function Tier1Result({ result }) {
               <p className="text-[10px] text-slate-400 mt-1">Confidence: {result.confidence} (cache)</p>
             )}
           </div>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
-            {pmo}
-          </span>
+          <StatusBadge status={pmo} />
         </div>
         {notes ? (
           <p className="px-4 py-2 text-sm text-slate-600 border-b border-slate-100 whitespace-pre-wrap">{notes}</p>
@@ -73,13 +61,13 @@ function Tier1Result({ result }) {
           {r.product_readiness_date && (
             <div>
               <p className="text-xs text-slate-400 mb-0.5">Product Readiness</p>
-              <p className="font-medium">{r.product_readiness_date}</p>
+              <p className="font-mono font-medium">{r.product_readiness_date}</p>
             </div>
           )}
           {r.gsp_launch_date && (
             <div>
               <p className="text-xs text-slate-400 mb-0.5">GSP Launch</p>
-              <p className="font-medium">{r.gsp_launch_date}</p>
+              <p className="font-mono font-medium">{r.gsp_launch_date}</p>
             </div>
           )}
           {!r.product_readiness_date && !r.gsp_launch_date && (
@@ -88,13 +76,13 @@ function Tier1Result({ result }) {
           {r.target_date && (
             <div>
               <p className="text-xs text-slate-400 mb-0.5">Target Date</p>
-              <p className="font-medium">{r.target_date}</p>
+              <p className="font-mono font-medium">{r.target_date}</p>
             </div>
           )}
           {r.actual_date && (
             <div>
               <p className="text-xs text-slate-400 mb-0.5">Actual Date</p>
-              <p className="font-medium">{r.actual_date}</p>
+              <p className="font-mono font-medium">{r.actual_date}</p>
             </div>
           )}
           {r.pm && (
@@ -107,6 +95,32 @@ function Tier1Result({ result }) {
             <div>
               <p className="text-xs text-slate-400 mb-0.5">SE Lead</p>
               <p className="font-medium">{r.se_lead}</p>
+            </div>
+          )}
+          {r.market_type && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">Market Type</p>
+              <p className="font-medium">{r.market_type}</p>
+            </div>
+          )}
+          {r.product_track && (
+            <div>
+              <p className="text-xs text-slate-400 mb-0.5">Product Track</p>
+              <p className="font-medium">{r.product_track}</p>
+            </div>
+          )}
+          {r.schedule_url && /^https?:\/\//i.test(r.schedule_url) && (
+            <div className="col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Schedule</p>
+              <a
+                href={r.schedule_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-bud-teal hover:underline"
+              >
+                Open linked schedule
+                <ExternalLink size={13} strokeWidth={2} />
+              </a>
             </div>
           )}
           {(jiraLinks.length > 0 || mondayUrl || showRawJira) && (
@@ -148,9 +162,7 @@ function Tier1Result({ result }) {
         {rows.filter(r => r.stage !== 'N/A').map((r, i) => (
           <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50">
             <span className="font-medium text-slate-800">{r.product}</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
-              {r.pmo_status || r.stage}
-            </span>
+            <StatusBadge status={r.pmo_status || r.stage} />
           </div>
         ))}
       </div>
@@ -191,13 +203,11 @@ function Tier2Result({ result }) {
               ) : null}
             </div>
             {result.intent === 'date_list' ? (
-              <span className="text-xs text-slate-500 truncate max-w-[40%]">
+              <span className="font-mono text-xs text-slate-500 truncate max-w-[40%]">
                 {r.gsp_launch_date || r.product_readiness_date || 'not scheduled'}
               </span>
             ) : null}
-            <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
-              {r.pmo_status || r.stage}
-            </span>
+            <StatusBadge status={r.pmo_status || r.stage} className="shrink-0" />
           </div>
         ))}
       </div>
@@ -224,9 +234,7 @@ function Tier3Result({ result }) {
             <div key={i} className="px-4 py-3 hover:bg-slate-50">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-slate-800 text-sm">{r.partner} · {r.product}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STAGE_COLORS[r.stage] || STAGE_COLORS['N/A']}`}>
-                  {r.pmo_status || r.stage}
-                </span>
+                <StatusBadge status={r.pmo_status || r.stage} />
               </div>
               {r.is_unmanaged_jira ? (
                 <p className="text-xs text-amber-700">Not in Monday — unmanaged Jira</p>

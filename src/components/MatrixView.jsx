@@ -13,6 +13,8 @@ import { getMatrixPmDisplay, PARTNER_PM_LEGEND } from '../data/partnerPmMatrix.j
 import { useData } from '../context/DataContext.jsx';
 import { matrixCellTooltip } from '../utils/releaseDisplay.js';
 import JiraMondayLinks from './JiraMondayLinks.jsx';
+import StatusBadge from './StatusBadge.jsx';
+import { cn } from '../lib/utils.js';
 
 const AREA_HEADER_TINT = [
   'bg-violet-50/90 text-violet-900',
@@ -43,11 +45,10 @@ function Cell({ release, onClick, tdClass = '', title: titleProp }) {
       title={titleProp ?? matrixCellTooltip(release)}
     >
       <div className="inline-flex flex-col items-center gap-0.5">
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold leading-tight ${s.badge} ${isNA ? 'opacity-45' : ''}`}
-        >
-          {label.length > 18 ? `${label.slice(0, 16)}…` : label}
-        </span>
+        <StatusBadge
+          status={label.length > 18 ? `${label.slice(0, 16)}…` : label}
+          className={cn('leading-tight', isNA && 'opacity-45')}
+        />
         {release.legacy_sourced ? (
           <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300">Legacy</span>
         ) : null}
@@ -79,13 +80,9 @@ function SummaryBar({ summary }) {
       {stageOrder.map(
         (stage) =>
           (summary.byStage[stage] || 0) > 0 && (
-            <span
-              key={stage}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm ${STAGES[stage].badge}`}
-            >
-              {STAGES[stage].label}
-              <span className="tabular-nums font-bold opacity-95">{summary.byStage[stage]}</span>
-            </span>
+            <StatusBadge key={stage} status={STAGES[stage].label} className="gap-2 px-3 py-1.5 text-xs normal-case tracking-normal">
+              <span className="font-mono font-bold opacity-95">{summary.byStage[stage]}</span>
+            </StatusBadge>
           )
       )}
       <div className="flex flex-wrap gap-3 ml-auto text-sm text-slate-600 dark:text-slate-300">
@@ -125,12 +122,7 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
         {Object.entries(STAGES).map(
           ([key, s]) =>
             key !== 'N/A' && (
-              <span
-                key={key}
-                className={`inline-flex items-center px-2 py-1 rounded-md font-semibold shadow-sm ${s.badge} text-xs`}
-              >
-                {s.label}
-              </span>
+              <StatusBadge key={key} status={s.label} className="text-xs" />
             )
         )}
         <span className="text-slate-400 dark:text-slate-500 ml-2 text-xs">
