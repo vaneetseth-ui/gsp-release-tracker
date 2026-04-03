@@ -335,19 +335,33 @@ export default function MatrixView({ onSelectPartner, onSelectRelease }) {
         )}
       </div>
 
-      <div className="px-4 sm:px-5 py-3 border-t border-slate-200/50 dark:border-slate-700/60 bg-slate-50/40 dark:bg-slate-900/30">
-        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+      <div className="px-4 sm:px-5 py-2.5 border-t border-slate-200/50 dark:border-slate-700/60 bg-slate-50/40 dark:bg-slate-900/30">
+        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
           Partner PM mapping
         </p>
-        <ul className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 leading-snug space-y-1 list-none m-0 p-0">
-          {PARTNER_PM_LEGEND.map((row) => (
-            <li key={row.pm}>
-              <span className="font-semibold text-slate-700 dark:text-slate-200">{row.pm}</span>
-              <span className="text-slate-400 dark:text-slate-500"> ({row.count})</span>
-              <span className="text-slate-500 dark:text-slate-400"> — {row.partners}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-wrap gap-1.5">
+          {PARTNER_PM_LEGEND.map((row) => {
+            const initials = row.pm.split(/[\s/]+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+            const isUnassigned = row.pm === 'Unassigned';
+            return (
+              <div
+                key={row.pm}
+                title={`${row.pm} — ${row.partners}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-2 py-1 text-[10px] leading-none"
+              >
+                {!isUnassigned && (
+                  <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 dark:bg-slate-500 text-[8px] font-bold text-white">
+                    {initials}
+                  </span>
+                )}
+                <span className="font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{row.pm}</span>
+                <span className="text-slate-300 dark:text-slate-600">·</span>
+                <span className="text-slate-500 dark:text-slate-400 whitespace-nowrap">{row.partners}</span>
+                <span className="text-slate-400 dark:text-slate-600 text-[9px]">({row.count})</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="px-4 sm:px-5 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/50 dark:border-slate-700/60">

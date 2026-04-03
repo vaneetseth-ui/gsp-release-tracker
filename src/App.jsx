@@ -39,20 +39,24 @@ const TABS = [
   { id: 'changelog',  label: 'Changes',    icon: Clock },
 ];
 
-function ActionButton({ children, onClick, disabled, title, primary = false, icon: Icon }) {
+function ActionButton({ children, onClick, disabled, title, primary = false, dark = false, icon: Icon }) {
+  const base = 'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed';
+  const variant = dark
+    ? primary
+      ? 'bg-bud-teal text-white hover:bg-cyan-500 shadow-sm'
+      : 'bg-white/10 text-white hover:bg-white/20'
+    : primary
+      ? 'bg-bud-navy text-white hover:bg-slate-800 shadow-sm'
+      : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50';
   return (
     <button
       type="button"
       onClick={onClick}
       title={title}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-        primary
-          ? 'bg-bud-navy text-white hover:bg-slate-800 shadow-sm'
-          : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
-      }`}
+      className={`${base} ${variant}`}
     >
-      {Icon ? <Icon size={16} strokeWidth={2} className="text-bud-teal" /> : null}
+      {Icon ? <Icon size={16} strokeWidth={2} className={dark ? 'text-white/80' : 'text-bud-teal'} /> : null}
       {children}
     </button>
   );
@@ -61,16 +65,16 @@ function ActionButton({ children, onClick, disabled, title, primary = false, ico
 function LeftRail({ activeTab, onTabChange, gapCount }) {
   return (
     <aside className="hidden w-[220px] flex-shrink-0 lg:flex">
-      <div className="flex w-full flex-col rounded-[28px] border border-slate-200 bg-white p-4 shadow-soft">
-        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-          <BuddAiMark compact />
+      <div className="flex w-full flex-col rounded-[28px] bg-bud-navy p-4 shadow-[0_18px_48px_-12px_rgba(10,14,39,0.5)]">
+        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+          <BuddAiMark compact dark />
           <div className="min-w-0">
-            <p className="font-display text-xl font-bold tracking-tight text-slate-950">GSP Tracker</p>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">PMO command center</p>
+            <p className="font-display text-xl font-bold tracking-tight text-white">GSP Tracker</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">PMO command center</p>
           </div>
         </div>
 
-        <nav className="mt-4 flex flex-col gap-1.5">
+        <nav className="mt-4 flex flex-col gap-1">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -80,18 +84,26 @@ function LeftRail({ activeTab, onTabChange, gapCount }) {
                 type="button"
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
-                  'flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold transition-all',
-                  isActive ? 'bg-bud-navy text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  'flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition-all',
+                  isActive
+                    ? 'bg-white/12 text-white ring-1 ring-white/10'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white'
                 )}
               >
                 <span className="flex items-center gap-3">
-                  <span className={cn('flex h-9 w-9 items-center justify-center rounded-2xl', isActive ? 'bg-white/10' : 'bg-slate-100')}>
-                    <Icon size={18} strokeWidth={2} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} />
+                  <span className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-xl',
+                    isActive ? 'bg-bud-teal/20' : 'bg-white/8'
+                  )}>
+                    <Icon size={16} strokeWidth={2} className={isActive ? 'text-bud-teal' : 'text-white/55'} />
                   </span>
                   <span>{tab.label}</span>
                 </span>
                 {tab.id === 'exceptions' ? (
-                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900')}>
+                  <span className={cn(
+                    'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                    isActive ? 'bg-bud-orange text-white' : 'bg-orange-500/25 text-orange-300'
+                  )}>
                     {gapCount}
                   </span>
                 ) : null}
@@ -106,7 +118,7 @@ function LeftRail({ activeTab, onTabChange, gapCount }) {
 
 function MobileTabBar({ activeTab, onTabChange, gapCount }) {
   return (
-    <nav className="mx-3 mt-2 flex gap-2 overflow-x-auto rounded-[20px] border border-slate-200 bg-white p-1.5 shadow-soft sm:mx-4 lg:hidden">
+    <nav className="mx-3 mt-2 flex gap-1.5 overflow-x-auto rounded-[20px] bg-bud-navy p-1.5 shadow-[0_8px_24px_-8px_rgba(10,14,39,0.4)] sm:mx-4 lg:hidden">
       {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -116,14 +128,14 @@ function MobileTabBar({ activeTab, onTabChange, gapCount }) {
             type="button"
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'flex min-w-[110px] items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition-all',
-              isActive ? 'bg-bud-navy text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
+              'flex min-w-[100px] items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition-all',
+              isActive ? 'bg-white/12 text-white ring-1 ring-white/10' : 'text-white/55 hover:bg-white/8 hover:text-white'
             )}
           >
-            <Icon size={16} strokeWidth={2} className={isActive ? 'text-bud-teal' : 'text-bud-purple'} />
+            <Icon size={16} strokeWidth={2} className={isActive ? 'text-bud-teal' : 'text-white/50'} />
             <span>{tab.label}</span>
             {tab.id === 'exceptions' && gapCount > 0 ? (
-              <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', isActive ? 'bg-bud-orange text-white' : 'bg-amber-100 text-amber-900')}>
+              <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', isActive ? 'bg-bud-orange text-white' : 'bg-orange-500/30 text-orange-300')}>
                 {gapCount}
               </span>
             ) : null}
@@ -149,29 +161,29 @@ function TopToolbar({
 
   return (
     <header className="px-3 pt-2 sm:px-4 sm:pt-3">
-      <div className="mx-auto flex max-w-[1380px] flex-wrap items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-3 shadow-soft">
+      <div className="mx-auto flex max-w-[1380px] flex-wrap items-center gap-3 rounded-[24px] bg-bud-navy px-4 py-3 shadow-[0_18px_48px_-12px_rgba(10,14,39,0.45)]">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Workspace</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-950">{activeTabLabel}</h1>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-white">{activeTabLabel}</h1>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/65">
               Monday-first operations
             </span>
           </div>
         </div>
 
         <form onSubmit={onQuickJump} className="order-3 w-full min-w-0 lg:order-none lg:w-[420px]">
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <Search size={16} className="text-slate-400" />
+          <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-white/10">
+            <Search size={16} className="text-white/45" />
             <input
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               list="toolbar-quick-jump"
               placeholder="Jump to partner, Jira key, or release"
-              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
             />
-            <button type="submit" className="rounded-xl bg-bud-navy px-3 py-1.5 text-xs font-semibold text-white">
+            <button type="submit" className="rounded-xl bg-bud-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors">
               Go
             </button>
           </div>
@@ -183,14 +195,15 @@ function TopToolbar({
         </form>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last sync</p>
-            <p className="mt-0.5 text-sm font-semibold text-slate-950">
+          <div className="rounded-2xl bg-white/10 px-3 py-2 text-right ring-1 ring-white/8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Last sync</p>
+            <p className="mt-0.5 text-sm font-semibold text-white">
               {syncStatus.lastSync || 'Waiting'}
             </p>
           </div>
           <ActionButton
             primary
+            dark
             icon={Sparkles}
             onClick={onSyncNow}
             disabled={syncStatus.checking}
@@ -199,6 +212,7 @@ function TopToolbar({
             {syncStatus.checking ? 'Syncing…' : 'Sync'}
           </ActionButton>
           <ActionButton
+            dark
             icon={RefreshCw}
             onClick={onRefresh}
             disabled={syncStatus.checking}
@@ -210,7 +224,7 @@ function TopToolbar({
             type="button"
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition-colors hover:bg-slate-50"
+            className="inline-flex items-center justify-center rounded-xl bg-white/10 p-2 text-white/75 transition-colors hover:bg-white/20"
             aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
           >
             {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}

@@ -1,9 +1,9 @@
 import React from 'react';
 
-export default function BuddAiMark({ className = '', compact = false }) {
+export default function BuddAiMark({ className = '', compact = false, dark = false }) {
   return (
     <div className={`inline-flex items-center gap-3 ${className}`}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0a0e27] shadow-sm ring-1 ring-slate-200/70">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm ${dark ? 'bg-white/12 ring-1 ring-white/15' : 'bg-[#0a0e27] ring-1 ring-slate-200/70'}`}>
         <svg
           viewBox="0 0 48 48"
           className="h-8 w-8"
